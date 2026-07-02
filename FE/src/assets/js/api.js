@@ -1,3 +1,5 @@
+import Auth from './auth.js';
+
 const API_BASE_URL = window.localStorage.getItem('API_BASE_URL') || 
   import.meta.env.VITE_API_BASE_URL ||
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
@@ -19,13 +21,31 @@ const API = {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
+    let body = options.body;
+    if (body && typeof body === 'object' && !(body instanceof FormData)) {
+      body = JSON.stringify(body);
+    }
+
     const config = {
       ...options,
-      headers
+      headers,
+      ...(body !== undefined ? { body } : {})
     };
 
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+
+      if (response.status === 401 || response.status === 403) {
+        const isAuthRoute = endpoint.startsWith('/auth/login') || 
+                            endpoint.startsWith('/auth/register') || 
+                            endpoint.startsWith('/auth/forgot-password') || 
+                            endpoint.startsWith('/auth/reset-password');
+        if (!isAuthRoute) {
+          Auth.logout();
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        }
+      }
+
       const data = await response.json();
 
       if (!response.ok) {
@@ -222,6 +242,84 @@ const API = {
     }
   },
 
+  // Auction endpoints
+  auction: {
+    async listSessions() {
+      return API.request('/auction/sessions');
+    },
+    async getState(sessionId) {
+      return API.request(`/auction/sessions/${sessionId}/state`);
+    },
+    async createSession(data) {
+      return API.request('/auction/sessions', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+    },
+    async getSession(sessionId) {
+      return API.request(`/auction/sessions/${sessionId}`);
+    },
+    async setupSession(sessionId, data) {
+      return API.request(`/auction/sessions/${sessionId}/setup`, {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+    },
+    async releaseSession(sessionId) {
+      return API.request(`/auction/sessions/${sessionId}/release`, {
+        method: 'POST'
+      });
+    },
+    async startSession(sessionId) {
+      return API.request(`/auction/sessions/${sessionId}/start`, {
+        method: 'POST'
+      });
+    },
+    async pauseSession(sessionId) {
+      return API.request(`/auction/sessions/${sessionId}/pause`, {
+        method: 'POST'
+      });
+    },
+    async resumeSession(sessionId) {
+      return API.request(`/auction/sessions/${sessionId}/resume`, {
+        method: 'POST'
+      });
+    },
+    async resetSession(sessionId) {
+      return API.request(`/auction/sessions/${sessionId}/reset`, {
+        method: 'POST'
+      });
+    },
+    async manualSell(sessionId, data) {
+      return API.request(`/auction/sessions/${sessionId}/manual-sell`, {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+    },
+    async forceSkipRound(sessionId) {
+      return API.request(`/auction/sessions/${sessionId}/force-skip`, {
+        method: 'POST'
+      });
+    },
+    async forcePassTeam(sessionId, data) {
+      return API.request(`/auction/sessions/${sessionId}/force-pass`, {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+    },
+    async rollbackLastRound(sessionId) {
+      return API.request(`/auction/sessions/${sessionId}/rollback`, {
+        method: 'POST'
+      });
+    },
+    async getAvailablePlayers() {
+      return API.request('/auction/players');
+    },
+    async getTeamsForSetup() {
+      return API.request('/auction/teams');
+    }
+  },
+
   // Support ticket endpoints
   support: {
     async list() {
@@ -248,6 +346,18 @@ const API = {
     async close(ticketId) {
       return API.request(`/support/tickets/${ticketId}/close`, {
         method: 'PUT'
+      });
+    }
+  },
+  
+  navbar: {
+    async getConfig() {
+      return API.request('/auth/navbar-config');
+    },
+    async updateConfig(value) {
+      return API.request('/auth/navbar-config', {
+        method: 'PUT',
+        body: JSON.stringify({ value })
       });
     }
   }

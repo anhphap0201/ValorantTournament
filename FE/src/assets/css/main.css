@@ -1,6 +1,17 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-val-red: #ff4655;
+  --color-val-dark: #020617;
+  --color-val-light: #ece8e1;
+  --color-val-blue: #0f172a;
+  --color-val-cyan: #00f599;
+  --color-valDark: #020617;
+  
+  --font-sans: 'Chakra Petch', sans-serif;
+  --font-valorant: 'Chakra Petch', sans-serif;
+}
+
 
 @font-face {
   font-family: 'Chakra Petch';
