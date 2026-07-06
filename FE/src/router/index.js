@@ -5,7 +5,7 @@ import Home from '../pages/Home.vue';
 // import Profile from '../pages/Profile.vue';
 // import WhatsNew from '../pages/WhatsNew.vue';
 import PlayerRegister from '../pages/PlayerRegister.vue';
-// import Tournaments from '../pages/Tournaments.vue';
+import Tournaments from '../pages/Tournaments.vue';
 import Admin from '../pages/Admin.vue';
 // import AdminDashboard from '../pages/AdminDashboard.vue';
 // import ResetPassword from '../pages/ResetPassword.vue';
@@ -17,11 +17,11 @@ const routes = [
     name: 'Home',
     component: Home
   },
-  // {
-  //   path: '/tournaments',
-  //   name: 'Tournaments',
-  //   component: Tournaments
-  // },
+  {
+    path: '/tournaments',
+    name: 'Tournaments',
+    component: Tournaments
+  },
   // {
   //   path: '/whats-new',
   //   name: 'WhatsNew',
