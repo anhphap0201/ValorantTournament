@@ -59,11 +59,6 @@ const routes = [
   //   meta: { requiresAuth: true }
   // },
   // {
-  //   path: '/support',
-  //   name: 'Support',
-  //   component: () => import('../pages/Support.vue'),
-  //   meta: { requiresAuth: true }
-  // },
   // {
   //   path: '/tournaments/voteplayer',
   //   redirect: '/tournaments?tab=activity'

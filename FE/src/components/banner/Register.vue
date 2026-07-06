@@ -4,17 +4,20 @@
     <div class="absolute -right-16 -top-16 w-64 h-64 bg-[#ff4655]/10 rounded-full blur-3xl pointer-events-none"></div>
     <div class="absolute -left-16 -bottom-16 w-64 h-64 bg-[#00f599]/5 rounded-full blur-3xl pointer-events-none"></div>
   
-
     <div class="relative z-10 grid grid-cols-1 md:grid-cols-12 h-full items-center p-6 md:p-6 gap-6">
       <!-- Left Column: Tournament Info -->
       <div class="md:col-span-8 flex flex-col justify-center text-left">
         <!-- Tournament Tag -->
-        <div v-if="isLimitReached" class="inline-flex items-center px-3 py-1 rounded bg-red-500/10 border border-red-500/30 text-red-500 text-xs font-semibold uppercase tracking-widest w-fit mb-4">
-          <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-          Đã đủ số lượng đăng ký
+        <div v-if="!tournament" class="inline-flex items-center px-3 py-1 rounded bg-white/5 border border-white/10 text-gray-500 text-xs font-semibold uppercase tracking-widest w-fit mb-4">
+          <span class="w-1.5 h-1.5 rounded-full bg-gray-500 mr-1.5"></span>
+          Đăng ký đóng
+        </div>
+        <div v-else-if="isLimitReached" class="inline-flex items-center px-3 py-1 rounded bg-red-500/10 border border-red-500/30 text-red-500 text-xs font-semibold uppercase tracking-widest w-fit mb-4">
+          <span class="w-1.5 h-1.5 rounded-full bg-red-500 mr-1.5"></span>
+          Đã đủ số lượng đội
         </div>
         <div v-else class="inline-flex items-center px-3 py-1 rounded bg-[#ff4655]/10 border border-[#ff4655]/30 text-[#ff4655] text-xs font-semibold uppercase tracking-widest w-fit mb-4 animate-pulse">
-          <span class="w-1.5 h-1.5 rounded-full bg-[#ff4655] mr-1"></span>
+          <span class="w-1.5 h-1.5 rounded-full bg-[#ff4655] mr-1.5"></span>
           Đang mở đăng ký
         </div>
 
@@ -34,15 +37,15 @@
             <div>
               <span class="block text-[10px] text-gray-500 uppercase font-semibold">Đã đăng ký</span>
               <span class="font-bold text-white">
-                {{ playerCount !== null ? `${playerCount}${maxPlayers ? ` / ${maxPlayers}` : ''} tuyển thủ` : 'Đang tải...' }}
+                {{ tournament ? `${playerCount} / ${maxPlayers} đội` : '0 đội' }}
               </span>
             </div>
           </div>
 
           <div class="flex items-center text-gray-400 bg-white/5 px-3 py-2 rounded-lg border border-white/5">
             <div>
-              <span class="block text-[10px] text-gray-500 uppercase font-semibold">Hạn chót đăng ký</span>
-              <span class="font-bold text-white">{{ tournament ? formatDateTime(tournament.registration_end) : 'Đang Cập Nhật' }}</span>
+              <span class="block text-[10px] text-gray-500 uppercase font-semibold">Thời gian bắt đầu</span>
+              <span class="font-bold text-white">{{ tournament ? formatDateTime(tournament.start_date) : 'Chưa có lịch' }}</span>
             </div>
           </div>
         </div>
@@ -51,10 +54,16 @@
       <!-- Right Column: Registration CTA Button -->
       <div class="md:col-span-4 flex flex-col items-center md:items-end justify-center gap-3 w-full">
         <div 
-          v-if="isLimitReached"
-          class="relative flex justify-center items-center gap-2.5 w-full md:w-auto md:min-w-[200px] px-8 py-5 bg-white/5 border border-white/10 text-gray-500 text-center font-bold text-lg tracking-wider rounded-lg cursor-not-allowed uppercase font-valorant"
+          v-if="!tournament"
+          class="relative flex justify-center items-center gap-2.5 w-full md:w-auto md:min-w-[200px] px-8 py-5 bg-white/5 border border-white/10 text-gray-500 text-center font-bold text-lg tracking-wider rounded-lg cursor-not-allowed uppercase font-valorant select-none"
         >
-          Đã đóng đăng ký
+          Chưa mở giải đấu
+        </div>
+        <div 
+          v-else-if="isLimitReached"
+          class="relative flex justify-center items-center gap-2.5 w-full md:w-auto md:min-w-[200px] px-8 py-5 bg-white/5 border border-white/10 text-gray-500 text-center font-bold text-lg tracking-wider rounded-lg cursor-not-allowed uppercase font-valorant select-none"
+        >
+          Đủ số lượng đội
         </div>
         <router-link 
           v-else
@@ -74,22 +83,19 @@
  
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-// import API from '../../assets/js/api.js'
-import Auth from '../../assets/js/auth.js'
 
-const isRegisteredPlayer = ref(false)
-const playerCount = ref(null)
-const maxPlayers = ref(null)
+const playerCount = ref(0)
+const maxPlayers = ref(0)
 const tournament = ref(null)
 
 const isLimitReached = computed(() => {
-  if (isRegisteredPlayer.value) return false
+  if (!tournament.value) return true
   if (maxPlayers.value === null || maxPlayers.value === undefined) return false
   return playerCount.value >= maxPlayers.value
 })
 
 const tournamentName = computed(() => {
-  return tournament.value ? tournament.value.name : 'DK Valorant Autumn Championship'
+  return tournament.value ? tournament.value.name : 'Chưa có giải đấu active'
 })
 
 const tournamentDescription = computed(() => {
@@ -98,14 +104,6 @@ const tournamentDescription = computed(() => {
   }
   return '"Bạn đã sẵn sàng thể hiện kỹ năng, chinh phục đỉnh cao và ghi danh vào lịch sử giải đấu? Đăng ký ngay để chứng tỏ bản lĩnh, thống trị giải đấu và chạm tay vào vương miện!"'
 })
-
-// const buttonLink = computed(() => {
-//   return isRegisteredPlayer.value ? '/profile' : '/register-player'
-// })
-
-// const buttonText = computed(() => {
-//   return isRegisteredPlayer.value ? 'Kiểm tra lại thông tin' : 'Đăng ký ngay'
-// })
 
 const buttonLink = computed(() => {
   return "/register-player"
@@ -116,7 +114,7 @@ const buttonText = computed(() => {
 })
 
 function formatDateTime(val) {
-  if (!val) return 'Đang Cập Nhật';
+  if (!val) return 'Chưa có lịch';
   try {
     const date = new Date(val);
     const day = String(date.getDate()).padStart(2, '0');
@@ -126,48 +124,31 @@ function formatDateTime(val) {
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${hours}:${minutes} ${day}/${month}/${year}`;
   } catch (e) {
-    return 'Đang Cập Nhật';
+    return 'Chưa có lịch';
   }
 }
 
-// onMounted(async () => {
-//   // Load active tournament info
-//   try {
-//     const tourRes = await API.tournaments.getActive()
-//     if (tourRes && tourRes.tournament) {
-//       tournament.value = tourRes.tournament
-//     }
-//   } catch (err) {
-//     console.error('Lỗi tải thông tin giải đấu:', err)
-//   }
-
-//   // Load count of registered players & limit
-//   try {
-//     const countRes = await API.auth.getPlayerCount()
-//     if (countRes && typeof countRes.count !== 'undefined') {
-//       playerCount.value = countRes.count
-//     }
-//     if (countRes && typeof countRes.maxPlayers !== 'undefined') {
-//       maxPlayers.value = countRes.maxPlayers
-//     }
-//   } catch (err) {
-//     console.error('Lỗi tải số lượng người chơi:', err)
-//   }
-
-//   // Check player registration status if logged in
-//   if (Auth.isLoggedIn()) {
-//     try {
-//       const profileRes = await API.auth.getPlayerProfile()
-//       if (profileRes && profileRes.player) {
-//         isRegisteredPlayer.value = true
-//       }
-//     } catch (err) {
-//       console.log('Chưa đăng ký tuyển thủ hoặc lỗi tải hồ sơ:', err)
-//     }
-//   }
-// })
+onMounted(async () => {
+  try {
+    const response = await fetch('http://localhost:3000/api/tournaments')
+    if (response.ok) {
+      const data = await response.json()
+      // Find the tournament currently in 'register' status
+      const activeTour = data.find(t => t.status === 'register')
+      if (activeTour) {
+        tournament.value = activeTour
+        playerCount.value = activeTour.registered_teams_count || 0
+        maxPlayers.value = activeTour.max_teams || 8
+      } else {
+        tournament.value = null
+      }
+    }
+  } catch (err) {
+    console.error('Lỗi khi tải thông tin giải đấu active:', err)
+  }
+})
 </script>
-
+ 
 <style scoped>
 @font-face {
   font-family: 'Valorant';

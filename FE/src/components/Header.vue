@@ -7,12 +7,13 @@
         <span class="text-[#ff4655] text-2xl font-bold font-sans tracking-wider">GROUP</span>
       </router-link>
 
-<div class="hidden md:flex items-center space-x-6">
+<div class="hidden md:flex items-center space-x-6 h-full">
   <router-link
     v-for="link in navLinks"
     :key="link.path"
     :to="link.path"
-    class="text-gray-300 hover:text-[#ff4655] transition"
+    class="text-gray-300 hover:text-[#ff4655] transition h-full flex items-center border-b-2 border-transparent hover:border-[#ff4655]/50 px-1 font-bold text-sm"
+    exact-active-class="text-[#ff4655] !border-[#ff4655]"
   >
     {{ link.name }}
   </router-link>
@@ -65,7 +66,8 @@
     :key="link.path"
     :to="link.path"
     @click="mobileMenuOpen = false"
-    class="text-gray-300 hover:text-[#ff4655] transition"
+    class="text-gray-300 hover:text-[#ff4655] transition py-1 text-left font-bold"
+    exact-active-class="text-[#ff4655] border-l-2 border-[#ff4655] pl-3"
   >
     {{ link.name }}
   </router-link>

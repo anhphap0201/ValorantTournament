@@ -28,12 +28,26 @@ initializeTable();
 
 const Tournament = {
   getAll: async () => {
-    const res = await db.query("SELECT * FROM tournaments ORDER BY id DESC");
+    const queryText = `
+      SELECT t.*, COALESCE(COUNT(te.id), 0)::int as registered_teams_count 
+      FROM tournaments t 
+      LEFT JOIN teams te ON t.id = te.tournament_id 
+      GROUP BY t.id 
+      ORDER BY t.id DESC
+    `;
+    const res = await db.query(queryText);
     return res.rows;
   },
 
   getById: async (id) => {
-    const res = await db.query("SELECT * FROM tournaments WHERE id = $1", [id]);
+    const queryText = `
+      SELECT t.*, COALESCE(COUNT(te.id), 0)::int as registered_teams_count 
+      FROM tournaments t 
+      LEFT JOIN teams te ON t.id = te.tournament_id 
+      WHERE t.id = $1 
+      GROUP BY t.id
+    `;
+    const res = await db.query(queryText, [id]);
     return res.rows[0];
   },
 
