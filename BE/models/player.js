@@ -36,12 +36,16 @@ const initializeTable = async () => {
   const alterIsCaptain = `
     ALTER TABLE players ADD COLUMN IF NOT EXISTS is_captain BOOLEAN DEFAULT FALSE;
   `;
+  const alterTeamsTournamentId = `
+    ALTER TABLE teams ADD COLUMN IF NOT EXISTS tournament_id INT REFERENCES tournaments(id) ON DELETE SET NULL;
+  `;
 
   try {
     await db.query(queryTeams);
     await db.query(queryPlayers);
     await db.query(alterTeamId);
     await db.query(alterIsCaptain);
+    await db.query(alterTeamsTournamentId);
     console.log("Database tables and columns verified/migrated successfully.");
   } catch (err) {
     console.error("Error creating/migrating tables:", err);
@@ -181,14 +185,26 @@ const Player = {
 
   registerTeam: async (teamData) => {
     const { teamName, teamLogo, members } = teamData;
+
+    // 1. Find the latest tournament currently in 'register' status
+    const resTournament = await db.query(
+      "SELECT id FROM tournaments WHERE status = $1 ORDER BY id DESC LIMIT 1",
+      ['register']
+    );
+
+    if (resTournament.rows.length === 0) {
+      throw new Error("Không có giải đấu nào đang mở cổng đăng ký (trạng thái 'register'). Đăng ký bị từ chối.");
+    }
+    const tournamentId = resTournament.rows[0].id;
     
     const client = await db.connect();
     try {
       await client.query('BEGIN');
       
+      // 2. Insert team with tournament_id
       const resTeam = await client.query(
-        "INSERT INTO teams (name, logo) VALUES ($1, $2) RETURNING *",
-        [teamName, teamLogo || null]
+        "INSERT INTO teams (name, logo, tournament_id) VALUES ($1, $2, $3) RETURNING *",
+        [teamName, teamLogo || null, tournamentId]
       );
       const teamId = resTeam.rows[0].id;
       

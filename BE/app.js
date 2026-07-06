@@ -8,6 +8,7 @@ app.use(express.json());
 
 // Import routes
 const playerRoutes = require("./routes/playerRoutes.js");
+const tournamentRoutes = require("./routes/tournamentRoutes.js");
 
 function logger(req, res, next) {
   console.log(`${req.method} ${req.url}`);
@@ -20,8 +21,9 @@ app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
-// Mount player CRUD routes
+// Mount CRUD routes
 app.use("/api/players", playerRoutes);
+app.use("/api/tournaments", tournamentRoutes);
 
 
 app.listen(3000, () => {
