@@ -74,7 +74,7 @@
  
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import API from '../../assets/js/api.js'
+// import API from '../../assets/js/api.js'
 import Auth from '../../assets/js/auth.js'
 
 const isRegisteredPlayer = ref(false)
@@ -99,12 +99,20 @@ const tournamentDescription = computed(() => {
   return '"Bạn đã sẵn sàng thể hiện kỹ năng, chinh phục đỉnh cao và ghi danh vào lịch sử giải đấu? Đăng ký ngay để chứng tỏ bản lĩnh, thống trị giải đấu và chạm tay vào vương miện!"'
 })
 
+// const buttonLink = computed(() => {
+//   return isRegisteredPlayer.value ? '/profile' : '/register-player'
+// })
+
+// const buttonText = computed(() => {
+//   return isRegisteredPlayer.value ? 'Kiểm tra lại thông tin' : 'Đăng ký ngay'
+// })
+
 const buttonLink = computed(() => {
-  return isRegisteredPlayer.value ? '/profile' : '/register-player'
+  return "/register-player"
 })
 
 const buttonText = computed(() => {
-  return isRegisteredPlayer.value ? 'Kiểm tra lại thông tin' : 'Đăng ký ngay'
+  return "Đăng ký ngay"
 })
 
 function formatDateTime(val) {
@@ -122,42 +130,42 @@ function formatDateTime(val) {
   }
 }
 
-onMounted(async () => {
-  // Load active tournament info
-  try {
-    const tourRes = await API.tournaments.getActive()
-    if (tourRes && tourRes.tournament) {
-      tournament.value = tourRes.tournament
-    }
-  } catch (err) {
-    console.error('Lỗi tải thông tin giải đấu:', err)
-  }
+// onMounted(async () => {
+//   // Load active tournament info
+//   try {
+//     const tourRes = await API.tournaments.getActive()
+//     if (tourRes && tourRes.tournament) {
+//       tournament.value = tourRes.tournament
+//     }
+//   } catch (err) {
+//     console.error('Lỗi tải thông tin giải đấu:', err)
+//   }
 
-  // Load count of registered players & limit
-  try {
-    const countRes = await API.auth.getPlayerCount()
-    if (countRes && typeof countRes.count !== 'undefined') {
-      playerCount.value = countRes.count
-    }
-    if (countRes && typeof countRes.maxPlayers !== 'undefined') {
-      maxPlayers.value = countRes.maxPlayers
-    }
-  } catch (err) {
-    console.error('Lỗi tải số lượng người chơi:', err)
-  }
+//   // Load count of registered players & limit
+//   try {
+//     const countRes = await API.auth.getPlayerCount()
+//     if (countRes && typeof countRes.count !== 'undefined') {
+//       playerCount.value = countRes.count
+//     }
+//     if (countRes && typeof countRes.maxPlayers !== 'undefined') {
+//       maxPlayers.value = countRes.maxPlayers
+//     }
+//   } catch (err) {
+//     console.error('Lỗi tải số lượng người chơi:', err)
+//   }
 
-  // Check player registration status if logged in
-  if (Auth.isLoggedIn()) {
-    try {
-      const profileRes = await API.auth.getPlayerProfile()
-      if (profileRes && profileRes.player) {
-        isRegisteredPlayer.value = true
-      }
-    } catch (err) {
-      console.log('Chưa đăng ký tuyển thủ hoặc lỗi tải hồ sơ:', err)
-    }
-  }
-})
+//   // Check player registration status if logged in
+//   if (Auth.isLoggedIn()) {
+//     try {
+//       const profileRes = await API.auth.getPlayerProfile()
+//       if (profileRes && profileRes.player) {
+//         isRegisteredPlayer.value = true
+//       }
+//     } catch (err) {
+//       console.log('Chưa đăng ký tuyển thủ hoặc lỗi tải hồ sơ:', err)
+//     }
+//   }
+// })
 </script>
 
 <style scoped>

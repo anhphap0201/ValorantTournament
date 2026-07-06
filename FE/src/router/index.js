@@ -4,7 +4,7 @@ import Home from '../pages/Home.vue';
 // import Register from '../pages/Register.vue';
 // import Profile from '../pages/Profile.vue';
 // import WhatsNew from '../pages/WhatsNew.vue';
-// import PlayerRegister from '../pages/PlayerRegister.vue';
+import PlayerRegister from '../pages/PlayerRegister.vue';
 // import Tournaments from '../pages/Tournaments.vue';
 // import Admin from '../pages/Admin.vue';
 // import AdminDashboard from '../pages/AdminDashboard.vue';
@@ -47,12 +47,11 @@ const routes = [
   //   name: 'ResetPassword',
   //   component: ResetPassword
   // },
-  // {
-  //   path: '/register-player',
-  //   name: 'PlayerRegister',
-  //   component: PlayerRegister,
-  //   meta: { requiresAuth: true }
-  // },
+  {
+    path: '/register-player',
+    name: 'PlayerRegister',
+    component: PlayerRegister
+  },
   // {
   //   path: '/profile',
   //   name: 'Profile',
@@ -93,19 +92,9 @@ const router = createRouter({
   routes
 });
 
-// Navigation Guard
+// Navigation Guard bypassed for frontend-only mode
 router.beforeEach((to, from, next) => {
-  if (to.matched.some(record => record.meta.requiresAuth)) {
-    if (!Auth.isLoggedIn()) {
-      next({ name: 'Login' });
-    } else if (to.matched.some(record => record.meta.requiresAdmin) && !Auth.isAdmin()) {
-      next({ name: 'Home' });
-    } else {
-      next();
-    }
-  } else {
-    next();
-  }
+  next();
 });
 
 export default router;

@@ -1,0 +1,20 @@
+# ==============================================================================
+# PROJECT SYSTEM REQUIREMENTS & DEPENDENCIES
+# ==============================================================================
+
+# Core Runtimes
+Node.js >= 18.0.0
+PostgreSQL >= 14.0
+
+# Backend Dependencies (BE/package.json)
+express>=5.2.1
+cors>=2.8.6
+pg>=8.11.3
+
+# Frontend Dependencies (FE/package.json)
+vue>=3.5.34
+vue-router>=5.1.0
+vite>=8.0.12
+tailwindcss>=4.3.1
+@tailwindcss/vite>=4.3.1
+@vitejs/plugin-vue>=6.0.6

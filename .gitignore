@@ -40,3 +40,6 @@ logs/
 *.sln
 *.sw?
 Thumbs.db
+
+# Database initialization file
+init.sql
