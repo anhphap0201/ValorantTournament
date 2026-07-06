@@ -423,8 +423,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { usePlayer } from '../composables/usePlayer.js'
 
 const router = useRouter()
+const { registerTeam } = usePlayer()
 
 const currentStep = ref(1)
 const transitionName = ref('slide-next')
@@ -628,34 +630,64 @@ function nextStep() {
 }
 
 function fillFakeData() {
-  teamName.value = "Draft Kings Esports"
-  teamLogoPreview.value = "https://i.pravatar.cc/150?img=1"
-  teamLogo.value = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
-
-  const firstNames = ['Nam', 'Khánh', 'Huy', 'Minh', 'Tuấn', 'Dũng', 'Tùng', 'Đức', 'Sơn', 'Linh']
-  const lastNames = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Phan', 'Vũ', 'Đặng', 'Bùi', 'Đỗ']
+  const step = currentStep.value;
+  const m = members.value[step - 1];
   
-  members.value.forEach((m, idx) => {
-    const randomFirst = firstNames[Math.floor(Math.random() * firstNames.length)]
-    const randomLast = lastNames[Math.floor(Math.random() * lastNames.length)]
-    m.fullName = `${randomLast} ${randomFirst}`
-    m.gender = ['Male', 'Female'][Math.floor(Math.random() * 2)]
-    m.facebookLink = `https://facebook.com/player.fake.${idx + 1}`
-    m.nickname = `DiscordUser_${idx + 1}#${Math.floor(1000 + Math.random() * 9000)}`
-    m.riotId = `PlayerFake${idx + 1}#VN${Math.floor(10 + Math.random() * 90)}`
-    m.rankName = rankList[Math.floor(Math.random() * rankList.length)]
-    m.favoriteAgent = agentList[Math.floor(Math.random() * agentList.length)]
-    
-    const shuffledRoles = [...rolesList].sort(() => 0.5 - Math.random())
-    m.preferredRoles = shuffledRoles.slice(0, Math.floor(Math.random() * 2) + 1)
-    
-    m.strengths = `Chơi tốt mọi đặc vụ, có kinh nghiệm thi đấu giải ${idx + 1}.`
-    m.avatarPreview = "https://i.pravatar.cc/150?img=" + (10 + idx)
-    m.avatar = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
-  })
+  if (step === 1) {
+    teamName.value = "Draft Kings Esports";
+    m.fullName = "Nguyễn Văn Nam";
+    m.gender = "Male";
+    m.facebookLink = "https://facebook.com/nam.nguyen";
+    m.nickname = "Nam#1234";
+    m.riotId = "Nam#VN1";
+    m.rankName = "Ascendant 1";
+    m.favoriteAgent = "Jett";
+    m.preferredRoles = ["Duelist"];
+    m.strengths = "Đội trưởng, vai trò Duelist chính.";
+  } else if (step === 2) {
+    m.fullName = "Trần Huy Khánh";
+    m.gender = "Male";
+    m.facebookLink = "https://facebook.com/khanh.tran";
+    m.nickname = "Khanh#5678";
+    m.riotId = "Khanh#VN2";
+    m.rankName = "Diamond 3";
+    m.favoriteAgent = "Omen";
+    m.preferredRoles = ["Controller"];
+    m.strengths = "Controller kiểm soát bản đồ tốt.";
+  } else if (step === 3) {
+    m.fullName = "Lê Minh Hoàng";
+    m.gender = "Male";
+    m.facebookLink = "https://facebook.com/hoang.le";
+    m.nickname = "Hoang#9012";
+    m.riotId = "Hoang#VN3";
+    m.rankName = "Platinum 2";
+    m.favoriteAgent = "Sova";
+    m.preferredRoles = ["Initiator"];
+    m.strengths = "Khởi tranh thông tin tốt.";
+  } else if (step === 4) {
+    m.fullName = "Phạm Tuấn Anh";
+    m.gender = "Male";
+    m.facebookLink = "https://facebook.com/anh.tuan";
+    m.nickname = "TuanAnh#3456";
+    m.riotId = "TuanAnh#VN4";
+    m.rankName = "Gold 3";
+    m.favoriteAgent = "Cypher";
+    m.preferredRoles = ["Sentinel"];
+    m.strengths = "Sentinel bảo vệ khu vực vững chắc.";
+  } else if (step === 5) {
+    m.fullName = "Vũ Thùy Linh";
+    m.gender = "Female";
+    m.facebookLink = "https://facebook.com/linh.vu";
+    m.nickname = "Linh#7890";
+    m.riotId = "Linh#VN5";
+    m.rankName = "Silver 3";
+    m.favoriteAgent = "Sage";
+    m.preferredRoles = ["Sentinel"];
+    m.strengths = "Support đồng đội, trị thương.";
+  }
   
-  statusMessage.value = 'Đã tự động điền dữ liệu giả lập cho cả đội!'
-  statusType.value = 'success'
+  statusMessage.value = `Đã tự động điền dữ liệu giả lập cho ${step === 1 ? 'Đội trưởng' : 'Thành viên ' + step}!`;
+  statusType.value = 'success';
 }
 
 function triggerTeamLogoInput() {
@@ -774,7 +806,7 @@ function handleFileChange(event) {
   reader.readAsDataURL(file)
 }
 
-function handleSubmit() {
+async function handleSubmit() {
   statusMessage.value = ''
   
   // Validate step 5
@@ -849,11 +881,44 @@ function handleSubmit() {
     }
   }
 
+  // 1. Payload created for Team (POST /api/teams or equivalent)
+  const teamPayload = {
+    name: teamName.value,
+    logo: teamLogo.value
+  }
+
+  // 2. Payloads created for 5 individual players (POST /api/players)
+  const playerPayloads = members.value.map((m, idx) => ({
+    team_id: "<ID_TEAM_VUA_TAO>",
+    riot_id: m.riotId,
+    nickname: m.nickname,
+    full_name: m.fullName,
+    gender: m.gender,
+    facebook_link: m.facebookLink,
+    favorite_agent: m.favoriteAgent,
+    strengths: m.strengths,
+    avatar: m.avatar,
+    rank_name: m.rankName,
+    preferred_role: Array.isArray(m.preferredRoles) ? m.preferredRoles.join(', ') : m.preferredRoles,
+    is_captain: idx === 0
+  }))
+
+  console.log("=== BƯỚC 1: PAYLOAD TẠO TEAM ===")
+  console.log(JSON.stringify(teamPayload, null, 2))
+
+  console.log("=== BƯỚC 2: PAYLOAD TẠO 5 TUYỂN THỦ TUẦN TỰ (GỬI 5 LẦN POST /api/players) ===")
+  playerPayloads.forEach((payload, idx) => {
+    console.log(`--- Thành viên ${idx + 1} (${idx === 0 ? 'Đội trưởng' : 'Thành viên'}): ---`)
+    console.log(JSON.stringify(payload, null, 2))
+  })
+
+  submitting.value = true
+
+
   const submitData = {
     teamName: teamName.value,
     teamLogo: teamLogo.value,
     members: members.value.map((m, idx) => ({
-      role: idx === 0 ? 'Đội trưởng' : `Thành viên ${idx + 1}`,
       fullName: m.fullName,
       gender: m.gender,
       facebookLink: m.facebookLink,
@@ -866,22 +931,23 @@ function handleSubmit() {
       avatar: m.avatar
     }))
   }
-  
-  console.log("=== THÔNG TIN ĐĂNG KÝ ĐỘI (5 THÀNH VIÊN) ===")
-  console.log(JSON.stringify(submitData, null, 2))
 
-  submitting.value = true
-  setTimeout(() => {
+  try {
+    await registerTeam(submitData)
     statusMessage.value = isUpdating.value 
       ? 'Cập nhật thông tin đăng ký đội thành công!' 
       : 'Đăng ký đội tham gia giải đấu thành công!'
     statusType.value = 'success'
-    submitting.value = false
     
     setTimeout(() => {
       router.push('/')
     }, 1500)
-  }, 1000)
+  } catch (err) {
+    statusMessage.value = err.message || 'Lỗi khi đăng ký đội tuyển.'
+    statusType.value = 'error'
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 
