@@ -6,7 +6,7 @@ import Home from '../pages/Home.vue';
 // import WhatsNew from '../pages/WhatsNew.vue';
 import PlayerRegister from '../pages/PlayerRegister.vue';
 // import Tournaments from '../pages/Tournaments.vue';
-// import Admin from '../pages/Admin.vue';
+import Admin from '../pages/Admin.vue';
 // import AdminDashboard from '../pages/AdminDashboard.vue';
 // import ResetPassword from '../pages/ResetPassword.vue';
 // import Auth from '../assets/js/auth.js';
@@ -74,12 +74,12 @@ const routes = [
   //   component: AdminDashboard,
   //   meta: { requiresAuth: true, requiresAdmin: true }
   // },
-  // {
-  //   path: '/admin/crud',
-  //   name: 'Admin',
-  //   component: Admin,
-  //   meta: { requiresAuth: true, requiresAdmin: true }
-  // },
+  {
+    path: '/admin',
+    name: 'Admin',
+    component: Admin,
+    // meta: { requiresAuth: true, requiresAdmin: true }
+  },
   // Fallback redirect to Home
   {
     path: '/:pathMatch(.*)*',

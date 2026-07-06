@@ -111,7 +111,7 @@ const isLoggedIn = ref(false);
 const navLinks = [
   { name: "Trang chủ", path: "/" },
   { name: "Giải đấu", path: "/tournaments" },
-  { name: "Hỗ trợ", path: "/support" },
+  { name: "Quản trị", path: "/admin" },
 ];
 
 const logout = () => {
