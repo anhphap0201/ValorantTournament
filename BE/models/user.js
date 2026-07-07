@@ -21,8 +21,18 @@ const initializeTable = async () => {
   try {
     await db.query(queryUsers);
     console.log("Database table 'users' verified/created successfully.");
+    
+    // Seed admin account if it does not exist
+    const checkAdmin = await db.query("SELECT * FROM users WHERE username = 'admin';");
+    if (checkAdmin.rows.length === 0) {
+      await db.query(`
+        INSERT INTO users (username, email, password_hash, role)
+        VALUES ('admin', 'admin@valtour.com', '123456', 'admin');
+      `);
+      console.log("Admin account (admin/123456) seeded successfully.");
+    }
   } catch (err) {
-    console.error("Error creating 'users' table:", err);
+    console.error("Error creating/seeding 'users' table:", err);
   }
 };
 
@@ -32,6 +42,7 @@ initializeTable();
 const User = {
   create: async (userData) => {
     const { username, email, password } = userData;
+
     const query = `
       INSERT INTO users (username, email, password_hash, role)
       VALUES ($1, $2, $3, 'guest')
@@ -91,6 +102,41 @@ const User = {
       RETURNING id, username, email, role;
     `;
     const res = await db.query(query, [newPassword, email]);
+    return res.rows[0];
+  },
+
+  getAll: async () => {
+    const query = `SELECT id, username, email, role, created_at FROM users ORDER BY id ASC;`;
+    const res = await db.query(query);
+    return res.rows;
+  },
+
+  createWithRole: async (userData) => {
+    const { username, email, password, role } = userData;
+    const query = `
+      INSERT INTO users (username, email, password_hash, role)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, username, email, role, created_at;
+    `;
+    const values = [username, email, password, role || 'guest'];
+    const res = await db.query(query, values);
+    return res.rows[0];
+  },
+
+  delete: async (id) => {
+    const query = `DELETE FROM users WHERE id = $1 RETURNING id, username, email;`;
+    const res = await db.query(query, [id]);
+    return res.rows[0];
+  },
+
+  updateRole: async (id, role) => {
+    const query = `
+      UPDATE users
+      SET role = $1
+      WHERE id = $2
+      RETURNING id, username, email, role, created_at;
+    `;
+    const res = await db.query(query, [role, id]);
     return res.rows[0];
   }
 };
