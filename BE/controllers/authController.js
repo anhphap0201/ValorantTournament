@@ -108,6 +108,76 @@ const authController = {
       console.error("Lỗi đặt lại mật khẩu:", error);
       res.status(500).json({ error: "Lỗi hệ thống khi đặt lại mật khẩu." });
     }
+  },
+
+  getProfile: async (req, res) => {
+    try {
+      const user = await User.findById(req.params.id);
+      if (!user) {
+        return res.status(404).json({ error: "Không tìm thấy người dùng." });
+      }
+      res.status(200).json({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role
+      });
+    } catch (error) {
+      console.error("Lỗi lấy thông tin cá nhân:", error);
+      res.status(500).json({ error: "Lỗi hệ thống khi lấy thông tin cá nhân." });
+    }
+  },
+
+  updateProfile: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { username, email, password } = req.body;
+
+      if (!username || !email) {
+        return res.status(400).json({ error: "Tên đăng nhập và email không được để trống." });
+      }
+
+      const currentUser = await User.findById(id);
+      if (!currentUser) {
+        return res.status(404).json({ error: "Không tìm thấy người dùng." });
+      }
+
+      if (username !== currentUser.username) {
+        const dupUsername = await User.findByUsernameExcludeId(username, id);
+        if (dupUsername) {
+          return res.status(400).json({ error: "Tên đăng nhập đã được sử dụng bởi tài khoản khác." });
+        }
+      }
+
+      if (email !== currentUser.email) {
+        const dupEmail = await User.findByEmailExcludeId(email, id);
+        if (dupEmail) {
+          return res.status(400).json({ error: "Email đã được sử dụng bởi tài khoản khác." });
+        }
+      }
+
+      let targetPassword = currentUser.password_hash;
+      if (password) {
+        if (password === currentUser.password_hash) {
+          return res.status(400).json({ error: "Mật khẩu mới phải khác mật khẩu cũ." });
+        }
+        targetPassword = password;
+      }
+
+      const updatedUser = await User.updateProfile(id, {
+        username,
+        email,
+        password: targetPassword
+      });
+
+      res.status(200).json({
+        message: "Cập nhật thông tin cá nhân thành công!",
+        user: updatedUser
+      });
+    } catch (error) {
+      console.error("Lỗi cập nhật thông tin cá nhân:", error);
+      res.status(500).json({ error: "Lỗi hệ thống khi cập nhật thông tin cá nhân." });
+    }
   }
 };
 

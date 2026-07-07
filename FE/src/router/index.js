@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import Home from '../pages/Home.vue';
 import Login from '../pages/Login.vue';
 import Register from '../pages/Register.vue';
+import Profile from '../pages/Profile.vue';
 // import WhatsNew from '../pages/WhatsNew.vue';
 import PlayerRegister from '../pages/PlayerRegister.vue';
 // import Tournaments from '../pages/Tournaments.vue';
@@ -50,6 +51,11 @@ const routes = [
     path: '/register-player',
     name: 'PlayerRegister',
     component: PlayerRegister
+  },
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: Profile
   },
   // {
   //   path: '/profile',

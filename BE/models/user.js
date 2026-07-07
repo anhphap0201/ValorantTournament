@@ -54,6 +54,35 @@ const User = {
     return res.rows[0];
   },
 
+  findById: async (id) => {
+    const query = `SELECT * FROM users WHERE id = $1;`;
+    const res = await db.query(query, [id]);
+    return res.rows[0];
+  },
+
+  findByUsernameExcludeId: async (username, id) => {
+    const query = `SELECT * FROM users WHERE username = $1 AND id != $2;`;
+    const res = await db.query(query, [username, id]);
+    return res.rows[0];
+  },
+
+  findByEmailExcludeId: async (email, id) => {
+    const query = `SELECT * FROM users WHERE email = $1 AND id != $2;`;
+    const res = await db.query(query, [email, id]);
+    return res.rows[0];
+  },
+
+  updateProfile: async (id, { username, email, password }) => {
+    const query = `
+      UPDATE users
+      SET username = $1, email = $2, password_hash = $3
+      WHERE id = $4
+      RETURNING id, username, email, role, created_at;
+    `;
+    const res = await db.query(query, [username, email, password, id]);
+    return res.rows[0];
+  },
+
   updatePasswordByEmail: async (email, newPassword) => {
     const query = `
       UPDATE users
