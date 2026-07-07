@@ -1,14 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import Home from '../pages/Home.vue';
-// import Login from '../pages/auth/Login.vue';
-// import Register from '../pages/Register.vue';
-// import Profile from '../pages/Profile.vue';
+import Login from '../pages/Login.vue';
+import Register from '../pages/Register.vue';
 // import WhatsNew from '../pages/WhatsNew.vue';
 import PlayerRegister from '../pages/PlayerRegister.vue';
 // import Tournaments from '../pages/Tournaments.vue';
 import Admin from '../pages/Admin.vue';
 // import AdminDashboard from '../pages/AdminDashboard.vue';
-// import ResetPassword from '../pages/ResetPassword.vue';
+import ResetPassword from '../pages/ResetPassword.vue';
 // import Auth from '../assets/js/auth.js';
 
 const routes = [
@@ -32,21 +31,21 @@ const routes = [
   //   name: 'Notifications',
   //   component: () => import('../pages/Notifications.vue')
   // },
-  // {
-  //   path: '/login',
-  //   name: 'Login',
-  //   component: Login
-  // },
-  // {
-  //   path: '/register',
-  //   name: 'Register',
-  //   component: Register
-  // },
-  // {
-  //   path: '/reset-password',
-  //   name: 'ResetPassword',
-  //   component: ResetPassword
-  // },
+  {
+    path: '/login',
+    name: 'Login',
+    component: Login
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: Register
+  },
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: ResetPassword
+  },
   {
     path: '/register-player',
     name: 'PlayerRegister',

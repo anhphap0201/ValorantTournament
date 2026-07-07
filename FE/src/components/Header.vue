@@ -103,12 +103,39 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
 const mobileMenuOpen = ref(false);
 const isLoggedIn = ref(false);
+const user = ref(null);
+
+const checkLoginStatus = () => {
+  const storedUser = localStorage.getItem("user");
+  if (storedUser) {
+    user.value = JSON.parse(storedUser);
+    isLoggedIn.value = true;
+  } else {
+    user.value = null;
+    isLoggedIn.value = false;
+  }
+};
+
+const logout = () => {
+  localStorage.removeItem("user");
+  localStorage.removeItem("user_role");
+  isLoggedIn.value = false;
+  user.value = null;
+  
+  // Dispatch custom event to notify other components of auth change
+  window.dispatchEvent(new CustomEvent("auth-state-changed"));
+  // Reset role to guest
+  window.dispatchEvent(new CustomEvent("role-changed", { detail: "guest" }));
+
+  mobileMenuOpen.value = false;
+  router.push("/login");
+};
 
 const navLinks = [
   { name: "Trang chủ", path: "/" },
@@ -116,9 +143,12 @@ const navLinks = [
   { name: "Quản trị", path: "/admin" },
 ];
 
-const logout = () => {
-  isLoggedIn.value = false;
-  mobileMenuOpen.value = false;
-  router.push("/login");
-};
+onMounted(() => {
+  checkLoginStatus();
+  window.addEventListener("auth-state-changed", checkLoginStatus);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("auth-state-changed", checkLoginStatus);
+});
 </script>
