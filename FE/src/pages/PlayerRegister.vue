@@ -425,6 +425,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlayer } from '../composables/usePlayer.js'
 import { useTournament } from '../composables/useTournament.js'
+import Auth from '../assets/js/auth.js'
 
 const router = useRouter()
 const { registerTeam } = usePlayer()
@@ -925,10 +926,11 @@ async function handleSubmit() {
 
   submitting.value = true
 
-
+  const currentUser = Auth.getUser()
   const submitData = {
     teamName: teamName.value,
     teamLogo: teamLogo.value,
+    userId: currentUser ? currentUser.id : null,
     members: members.value.map((m, idx) => ({
       fullName: m.fullName,
       gender: m.gender,
@@ -945,6 +947,14 @@ async function handleSubmit() {
 
   try {
     await registerTeam(submitData)
+    
+    // Update logged in user role to captain in localStorage so FE updates instantly
+    if (currentUser) {
+      currentUser.role = 'captain'
+      localStorage.setItem('user', JSON.stringify(currentUser))
+      window.dispatchEvent(new Event('storage'))
+    }
+
     statusMessage.value = isUpdating.value 
       ? 'Cập nhật thông tin đăng ký đội thành công!' 
       : 'Đăng ký đội tham gia giải đấu thành công!'

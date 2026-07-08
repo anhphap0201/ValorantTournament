@@ -38,21 +38,6 @@
               <h3 class="font-valorant text-xl sm:text-2xl font-black text-[#ff4655] uppercase tracking-wider leading-none">
                 {{ team.name }}
               </h3>
-              <p class="text-[10px] sm:text-xs font-bold text-slate-400 mt-1.5 uppercase tracking-wider">
-                Captain: <span class="text-white font-extrabold">{{ team.captain_nickname || 'Chưa rõ' }}</span>
-              </p>
-            </div>
-          </div>
-          
-          <!-- Tokens and Stats -->
-          <div class="flex gap-3 items-center justify-between sm:justify-start">
-            <div class="bg-white/[0.02] border border-white/[0.04] rounded-xl px-4 py-2 text-center shrink-0">
-              <span class="block text-[8px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1">Thành viên</span>
-              <span class="text-sm font-black text-white font-valorant">{{ getMembers(team).length + (getCaptain(team) ? 1 : 0) }}/5</span>
-            </div>
-            <div class="bg-white/[0.02] border border-white/[0.04] rounded-xl px-4 py-2 text-center shrink-0">
-              <span class="block text-[8px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1">Koin còn</span>
-              <span class="text-sm font-black text-[#fbbf24] font-valorant">{{ team.tokens_remaining }} Koin</span>
             </div>
           </div>
         </div>
@@ -64,10 +49,6 @@
           <div 
             class="group relative border border-[#ff4655]/40 rounded-2xl p-4 bg-[#0b131a]/85 transition-all duration-300 hover:border-[#ff4655] hover:-translate-y-1 hover:shadow-[0_4px_20px_rgba(255,70,85,0.15)] text-left flex flex-col justify-between overflow-hidden min-h-[150px]"
           >
-            <!-- Crown Indicator -->
-            <div class="absolute top-2 right-2 bg-[#ff4655] border border-red-400 px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider text-white font-valorant flex items-center gap-1 z-20">
-              👑 Captain
-            </div>
 
             <!-- Top: Avatar & Riot ID -->
             <div class="flex items-start gap-3">

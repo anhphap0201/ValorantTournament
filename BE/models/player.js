@@ -184,7 +184,7 @@ const Player = {
   },
 
   registerTeam: async (teamData) => {
-    const { teamName, teamLogo, members } = teamData;
+    const { teamName, teamLogo, members, userId } = teamData;
 
     // 1. Find the latest tournament currently in 'register' status
     const resTournament = await db.query(
@@ -200,6 +200,14 @@ const Player = {
     const client = await db.connect();
     try {
       await client.query('BEGIN');
+      
+      // Update registering user's role to captain
+      if (userId) {
+        await client.query(
+          "UPDATE users SET role = $1 WHERE id = $2",
+          ['captain', userId]
+        );
+      }
       
       // 2. Insert team with tournament_id
       const resTeam = await client.query(
