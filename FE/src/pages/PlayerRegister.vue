@@ -1,12 +1,12 @@
 <template>
   <div class="cyber-grid flex-grow py-8 px-4 sm:px-6 lg:px-8 flex justify-center items-start">
-    <div class="w-full lg:w-[80%] max-w-6xl glass-card rounded-2xl p-6 md:p-10 shadow-2xl glow-red">
+    <div class="w-full lg:w-[80%] max-w-[1400px] glass-card rounded-2xl p-6 md:p-10 shadow-2xl glow-red">
       
       <!-- Page Header -->
       <div class="text-center mb-8 pb-4 border-b border-white/10">
         <h1 class="text-2xl md:text-3xl font-extrabold text-white font-valorant tracking-wider mb-2">ĐĂNG KÝ THAM GIA GIẢI ĐẤU</h1>
         <p class="text-gray-400 text-xs md:text-sm uppercase tracking-wider font-semibold">
-          DK Valorant Autumn Championship
+          {{ tournament?.name || 'Đang tải...' }}
         </p>
         <br>
         <p class="text-red-500 text-xs md:text-sm uppercase tracking-wider font-semibold">Vui lòng trung thực khi cung cấp thông tin !</p>
@@ -424,9 +424,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlayer } from '../composables/usePlayer.js'
+import { useTournament } from '../composables/useTournament.js'
 
 const router = useRouter()
 const { registerTeam } = usePlayer()
+const { tournaments, fetchTournaments } = useTournament()
+const tournament = ref(null)
 
 const currentStep = ref(1)
 const transitionName = ref('slide-next')
@@ -491,9 +494,17 @@ const progressPercent = computed(() => {
   return ((currentStep.value - 1) / 4) * 100
 })
 
-onMounted(() => {
-  playerCount.value = 12
-  maxPlayers.value = 50
+onMounted(async () => {
+  await fetchTournaments()
+  if (tournaments.value.length > 0) {
+    const active = tournaments.value.find(t => t.status === 'register' || t.status === 'running')
+    tournament.value = active || tournaments.value[0]
+    
+    if (tournament.value) {
+      maxPlayers.value = tournament.value.max_teams || 50
+      playerCount.value = tournament.value.registered_teams_count || 0
+    }
+  }
 })
 
 function normalizeRiotId(member) {
