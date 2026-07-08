@@ -261,6 +261,7 @@ onMounted(async () => {
     await fetchTournaments()
     await fetchUsers()
     await fetchTeams()
+    await fetchPlayers()
   }
 })
 
@@ -454,6 +455,192 @@ const handleDeleteTeam = async (id) => {
 const getTournamentName = (tournamentId) => {
   const t = tournaments.value.find(t => t.id === tournamentId)
   return t ? t.name : 'Chưa gán'
+}
+
+// Player management state & methods
+import { usePlayer } from '../composables/usePlayer.js'
+
+const {
+  players: adminPlayers,
+  loading: playersLoading,
+  error: playersError,
+  successMessage: playersSuccess,
+  fetchPlayers,
+  createPlayer,
+  updatePlayer,
+  deletePlayer: deletePlayerApi,
+  clearMessages: clearPlayerMessages
+} = usePlayer()
+
+// Modal states for player
+const showPlayerModal = ref(false)
+const isEditingPlayer = ref(false)
+const selectedPlayerId = ref(null)
+
+const playerForm = ref({
+  riotId: '',
+  nickname: '',
+  fullName: '',
+  gender: 'Male',
+  facebookLink: '',
+  favoriteAgent: '',
+  strengths: '',
+  avatar: '',
+  rankName: 'Gold 1',
+  preferredRoles: [],
+  teamId: '',
+  isCaptain: false
+})
+
+const rolesList = ['Duelist', 'Sentinel', 'Initiator', 'Controller']
+const rankList = [
+  'Iron 1', 'Iron 2', 'Iron 3',
+  'Bronze 1', 'Bronze 2', 'Bronze 3',
+  'Silver 1', 'Silver 2', 'Silver 3',
+  'Gold 1', 'Gold 2', 'Gold 3',
+  'Platinum 1', 'Platinum 2', 'Platinum 3',
+  'Diamond 1', 'Diamond 2', 'Diamond 3',
+  'Ascendant 1', 'Ascendant 2', 'Ascendant 3',
+  'Immortal 1', 'Immortal 2', 'Immortal 3',
+  'Radiant'
+]
+
+const agentList = [
+  'Astra', 'Breach', 'Brimstone', 'Chamber', 'Clove', 'Cypher', 'Deadlock',
+  'Fade', 'Gekko', 'Harbor', 'Iso', 'Jett', 'KAY/O', 'Killjoy',
+  'Neon', 'Omen', 'Phoenix', 'Raze', 'Reyna', 'Sage', 'Skye', 'Sova',
+  'Viper', 'Vyse', 'Yoru'
+].sort()
+
+const openCreatePlayerModal = () => {
+  isEditingPlayer.value = false
+  selectedPlayerId.value = null
+  playerForm.value = {
+    riotId: '',
+    nickname: '',
+    fullName: '',
+    gender: 'Male',
+    facebookLink: '',
+    favoriteAgent: agentList[0] || 'Jett',
+    strengths: '',
+    avatar: '',
+    rankName: 'Gold 1',
+    preferredRoles: [],
+    teamId: '',
+    isCaptain: false
+  }
+  clearPlayerMessages()
+  showPlayerModal.value = true
+}
+
+const openEditPlayerModal = (p) => {
+  isEditingPlayer.value = true
+  selectedPlayerId.value = p.id
+  
+  let parsedRoles = []
+  if (p.preferred_role) {
+    parsedRoles = typeof p.preferred_role === 'string'
+      ? p.preferred_role.split(',').map(r => r.trim())
+      : Array.isArray(p.preferred_role)
+        ? p.preferred_role
+        : []
+  }
+
+  playerForm.value = {
+    riotId: p.riot_id || '',
+    nickname: p.nickname || '',
+    fullName: p.full_name || '',
+    gender: p.gender || 'Male',
+    facebookLink: p.facebook_link || '',
+    favoriteAgent: p.favorite_agent || '',
+    strengths: p.strengths || '',
+    avatar: p.avatar || '',
+    rankName: p.rank_name || 'Gold 1',
+    preferredRoles: parsedRoles,
+    teamId: p.team_id || '',
+    isCaptain: p.is_captain || false
+  }
+  clearPlayerMessages()
+  showPlayerModal.value = true
+}
+
+const handlePlayerFormSubmit = async () => {
+  if (!playerForm.value.nickname.trim()) return
+
+  const payload = {
+    riotId: playerForm.value.riotId,
+    nickname: playerForm.value.nickname,
+    fullName: playerForm.value.fullName,
+    gender: playerForm.value.gender,
+    facebookLink: playerForm.value.facebookLink,
+    favoriteAgent: playerForm.value.favoriteAgent,
+    strengths: playerForm.value.strengths,
+    avatar: playerForm.value.avatar || null,
+    rankName: playerForm.value.rankName,
+    preferredRoles: playerForm.value.preferredRoles,
+    teamId: playerForm.value.teamId ? parseInt(playerForm.value.teamId) : null,
+    isCaptain: playerForm.value.isCaptain
+  }
+
+  try {
+    if (isEditingPlayer.value) {
+      await updatePlayer(selectedPlayerId.value, payload)
+    } else {
+      await createPlayer(payload)
+    }
+    showPlayerModal.value = false
+    await fetchPlayers()
+  } catch (err) {
+    alert(err.message)
+  }
+}
+
+const handleDeletePlayer = async (id) => {
+  if (confirm("Bạn có chắc chắn muốn xóa tuyển thủ này? Thao tác này không thể hoàn tác.")) {
+    try {
+      await deletePlayerApi(id)
+      await fetchPlayers()
+    } catch (err) {
+      alert("Xóa tuyển thủ thất bại: " + err.message)
+    }
+  }
+}
+
+const getTeamNameForPlayer = (teamId) => {
+  const t = adminTeams.value.find(team => team.id === teamId)
+  return t ? t.name : 'Tự do'
+}
+
+// Player search and filtering states
+const playerSearchQuery = ref('')
+const playerRankFilter = ref('all')
+const playerRoleFilter = ref('all')
+const playerTeamFilter = ref('all')
+
+const filteredPlayers = computed(() => {
+  return adminPlayers.value.filter(p => {
+    const matchesSearch = !playerSearchQuery.value.trim() ||
+      p.nickname.toLowerCase().includes(playerSearchQuery.value.toLowerCase()) ||
+      p.riot_id.toLowerCase().includes(playerSearchQuery.value.toLowerCase()) ||
+      (p.full_name && p.full_name.toLowerCase().includes(playerSearchQuery.value.toLowerCase()))
+    
+    const matchesRank = playerRankFilter.value === 'all' || p.rank_name === playerRankFilter.value
+    
+    const matchesRole = playerRoleFilter.value === 'all' || 
+      (p.preferred_role && p.preferred_role.toLowerCase().includes(playerRoleFilter.value.toLowerCase()))
+      
+    const matchesTeam = playerTeamFilter.value === 'all' || 
+      (playerTeamFilter.value === 'free' ? !p.team_id : p.team_id === parseInt(playerTeamFilter.value))
+
+    return matchesSearch && matchesRank && matchesRole && matchesTeam
+  })
+})
+
+const resetPlayerFilters = () => {
+  playerSearchQuery.value = ''
+  playerRankFilter.value = 'all'
+  playerRoleFilter.value = 'all'
+  playerTeamFilter.value = 'all'
 }
 </script>
 
@@ -752,6 +939,182 @@ const getTournamentName = (tournamentId) => {
                       :class="getStatusBadge(t.status).color"
                     >
                       {{ getStatusBadge(t.status).label }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Players Management -->
+      <div v-else-if="currentTab === 'players'" class="space-y-8 text-left animate-fadeIn">
+        <!-- Header Actions -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[#0f131a]/60 border border-white/5 p-4 rounded-2xl">
+          <div>
+            <h3 class="text-xl font-bold font-valorant text-white tracking-wide">Quản lý Tuyển thủ</h3>
+            <p class="text-xs text-gray-400 mt-1">Danh sách tất cả các tuyển thủ tham dự các giải đấu</p>
+          </div>
+          <button 
+            @click="openCreatePlayerModal"
+            class="bg-[#ff4655] hover:bg-[#ff5e6b] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition font-bold cursor-pointer flex items-center gap-2"
+          >
+            <i class="fas fa-plus"></i> Thêm Tuyển Thủ Mới
+          </button>
+        </div>
+
+        <!-- Search and Filter Bar -->
+        <div class="flex flex-col md:flex-row gap-4 bg-[#0f131a]/60 border border-white/5 p-4 rounded-2xl">
+          <!-- Search input -->
+          <div class="relative flex-grow">
+            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+            </span>
+            <input 
+              v-model="playerSearchQuery"
+              type="text" 
+              placeholder="Tìm kiếm tuyển thủ theo nickname, Riot ID hoặc tên thật..." 
+              class="w-full bg-[#0b0e14] border border-white/10 rounded-xl pl-10 pr-10 py-3 text-sm text-white focus:outline-none focus:border-[#ff4655] transition font-semibold"
+            />
+            <button 
+              v-if="playerSearchQuery" 
+              @click="playerSearchQuery = ''"
+              class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-white"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          
+          <!-- Filter Team -->
+          <div class="w-full md:w-48 shrink-0">
+            <select 
+              v-model="playerTeamFilter"
+              class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff4655] transition font-bold cursor-pointer"
+            >
+              <option value="all">Tất cả đội tuyển</option>
+              <option value="free">Tự do</option>
+              <option v-for="t in adminTeams" :key="t.id" :value="t.id">{{ t.name }}</option>
+            </select>
+          </div>
+
+          <!-- Filter Rank -->
+          <div class="w-full md:w-48 shrink-0">
+            <select 
+              v-model="playerRankFilter"
+              class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff4655] transition font-bold cursor-pointer"
+            >
+              <option value="all">Tất cả rank</option>
+              <option v-for="rank in rankList" :key="rank" :value="rank">{{ rank }}</option>
+            </select>
+          </div>
+
+          <!-- Filter Role -->
+          <div class="w-full md:w-40 shrink-0">
+            <select 
+              v-model="playerRoleFilter"
+              class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ff4655] transition font-bold cursor-pointer"
+            >
+              <option value="all">Tất cả vai trò</option>
+              <option v-for="role in rolesList" :key="role" :value="role">{{ role }}</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Players Table -->
+        <div class="bg-[#0f131a]/40 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-md">
+          <div v-if="playersLoading" class="p-20 text-center text-gray-400 flex flex-col items-center justify-center gap-3">
+            <div class="w-8 h-8 rounded-full border-2 border-dashed border-[#ff4655] animate-spin"></div>
+            <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Đang tải danh sách tuyển thủ...</span>
+          </div>
+
+          <div v-else-if="adminPlayers.length === 0" class="p-20 text-center text-gray-500">
+            Chưa có tuyển thủ nào được đăng ký.
+          </div>
+
+          <div v-else-if="filteredPlayers.length === 0" class="p-20 text-center text-gray-500 flex flex-col items-center justify-center gap-4">
+            <p class="font-bold text-lg text-white">Không tìm thấy tuyển thủ phù hợp</p>
+            <p class="text-sm max-w-sm">Thử thay đổi từ khóa tìm kiếm hoặc điều chỉnh bộ lọc của bạn.</p>
+            <button @click="resetPlayerFilters" class="px-4 py-2 bg-white/5 hover:bg-[#ff4655]/10 rounded-lg text-xs font-bold transition text-[#ff4655] mt-2">
+              Đặt lại bộ lọc
+            </button>
+          </div>
+
+          <div v-else class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-white/5 bg-white/2 text-gray-400 text-xs font-bold uppercase tracking-wider select-none">
+                  <th class="py-4.5 px-6 text-center">Thao tác</th>
+                  <th class="py-4.5 px-6">ID</th>
+                  <th class="py-4.5 px-6">Tuyển thủ</th>
+                  <th class="py-4.5 px-6">Tên thật</th>
+                  <th class="py-4.5 px-6">Peak Rank</th>
+                  <th class="py-4.5 px-6">Agent tủ</th>
+                  <th class="py-4.5 px-6">Đội tuyển</th>
+                  <th class="py-4.5 px-6">Vai trò</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5 text-sm text-gray-300 font-semibold">
+                <tr 
+                  v-for="p in filteredPlayers" 
+                  :key="p.id"
+                  class="hover:bg-white/2 transition duration-150"
+                >
+                  <td class="py-2 px-6">
+                    <div class="flex items-center justify-center gap-2">
+                      <button 
+                        @click="openEditPlayerModal(p)"
+                        class="p-2 rounded-lg bg-white/5 hover:bg-[#ff4655]/10 text-gray-400 hover:text-[#ff4655] transition flex items-center justify-center cursor-pointer"
+                        title="Chỉnh sửa tuyển thủ"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" xmlns="http://www.w3.org/2000/svg">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                      </button>
+                      <button 
+                        @click="handleDeletePlayer(p.id)"
+                        class="p-2 rounded-lg bg-white/5 hover:bg-rose-500/10 text-gray-400 hover:text-rose-500 transition flex items-center justify-center cursor-pointer"
+                        title="Xóa tuyển thủ"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" xmlns="http://www.w3.org/2000/svg">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                  <td class="py-4 px-6 text-gray-500 font-bold">#{{ p.id }}</td>
+                  <td class="py-4 px-6">
+                    <div class="flex items-center gap-3">
+                      <div class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-xs overflow-hidden shrink-0">
+                        <img v-if="p.avatar" :src="p.avatar" class="w-full h-full object-cover" />
+                        <i v-else class="fas fa-user text-sm text-gray-500"></i>
+                      </div>
+                      <div class="text-left">
+                        <span class="text-white font-bold block text-sm">{{ p.nickname }}</span>
+                        <span class="text-xs text-gray-500 font-mono leading-none">{{ p.riot_id }}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-6 text-gray-300">{{ p.full_name || 'N/A' }}</td>
+                  <td class="py-4 px-6 font-bold text-gray-400">{{ p.rank_name || 'Không rank' }}</td>
+                  <td class="py-4 px-6 text-white font-bold">{{ p.favorite_agent || 'N/A' }}</td>
+                  <td class="py-4 px-6 font-bold text-[#00f599]">{{ getTeamNameForPlayer(p.team_id) }}</td>
+                  <td class="py-4 px-6">
+                    <span 
+                      v-if="p.is_captain"
+                      class="px-2.5 py-1 rounded-lg text-xs font-bold border inline-block bg-amber-500/10 text-amber-400 border-amber-500/20 select-none"
+                    >
+                      Đội trưởng
+                    </span>
+                    <span 
+                      v-else
+                      class="px-2.5 py-1 rounded-lg text-xs font-bold border inline-block bg-white/5 text-gray-400 border-white/10 select-none"
+                    >
+                      Thành viên
                     </span>
                   </td>
                 </tr>
@@ -1293,6 +1656,217 @@ const getTournamentName = (tournamentId) => {
               class="px-6 py-3 rounded-lg bg-[#ff4655] hover:bg-[#ff5e6b] text-white font-bold transition"
             >
               <span>{{ isEditingTeam ? 'Lưu thay đổi' : 'Tạo đội tuyển' }}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <!-- Create / Edit Player Modal -->
+    <div 
+      v-if="showPlayerModal" 
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn"
+    >
+      <div class="bg-[#0f131a] border border-white/5 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-scaleIn text-left">
+        <!-- Modal Header -->
+        <div class="px-6 py-5 border-b border-white/5 flex items-center justify-between bg-white/2">
+          <h3 class="text-lg font-bold uppercase tracking-wider font-valorant text-[#ff4655]">
+            {{ isEditingPlayer ? 'Chỉnh sửa Tuyển thủ' : 'Thêm Tuyển Thủ Mới' }}
+          </h3>
+          <button 
+            @click="showPlayerModal = false"
+            class="text-gray-400 hover:text-white transition p-1 hover:bg-white/5 rounded-lg"
+          >
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+
+        <!-- Modal Form -->
+        <form @submit.prevent="handlePlayerFormSubmit">
+          <div class="p-6 space-y-5 max-h-[70vh] overflow-y-auto custom-scrollbar">
+            <!-- Error message -->
+            <div v-if="playersError" class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold">
+              {{ playersError }}
+            </div>
+
+            <!-- Two Column Row 1 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Riot ID -->
+              <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Riot ID <span class="text-[#ff4655]">*</span></label>
+                <input 
+                  v-model="playerForm.riotId" 
+                  type="text" 
+                  required
+                  placeholder="ví dụ: TenZ#1234" 
+                  class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff4655] transition font-bold"
+                />
+              </div>
+
+              <!-- Nickname (Discord username) -->
+              <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Discord Username <span class="text-[#ff4655]">*</span></label>
+                <input 
+                  v-model="playerForm.nickname" 
+                  type="text" 
+                  required
+                  placeholder="Nhập Discord username..." 
+                  class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff4655] transition font-bold"
+                />
+              </div>
+            </div>
+
+            <!-- Two Column Row 2 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Full Name -->
+              <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Tên thật <span class="text-[#ff4655]">*</span></label>
+                <input 
+                  v-model="playerForm.fullName" 
+                  type="text" 
+                  required
+                  placeholder="Nhập họ và tên..." 
+                  class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff4655] transition font-bold"
+                />
+              </div>
+
+              <!-- Gender -->
+              <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Giới tính</label>
+                <select 
+                  v-model="playerForm.gender" 
+                  class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff4655] transition font-bold cursor-pointer"
+                >
+                  <option value="Male">Nam</option>
+                  <option value="Female">Nữ</option>
+                  <option value="Other">Khác</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Two Column Row 3 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Facebook Link -->
+              <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Đường dẫn Facebook <span class="text-[#ff4655]">*</span></label>
+                <input 
+                  v-model="playerForm.facebookLink" 
+                  type="text" 
+                  required
+                  placeholder="https://facebook.com/username" 
+                  class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff4655] transition font-bold"
+                />
+              </div>
+
+              <!-- Avatar URL -->
+              <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Ảnh đại diện (URL)</label>
+                <input 
+                  v-model="playerForm.avatar" 
+                  type="text" 
+                  placeholder="https://example.com/avatar.png" 
+                  class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff4655] transition font-bold"
+                />
+              </div>
+            </div>
+
+            <!-- Two Column Row 4 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Peak Rank -->
+              <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Peak Rank</label>
+                <select 
+                  v-model="playerForm.rankName" 
+                  class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff4655] transition font-bold cursor-pointer"
+                >
+                  <option v-for="rank in rankList" :key="rank" :value="rank">{{ rank }}</option>
+                </select>
+              </div>
+
+              <!-- Favorite Agent -->
+              <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Đặc vụ yêu thích</label>
+                <select 
+                  v-model="playerForm.favoriteAgent" 
+                  class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff4655] transition font-bold cursor-pointer"
+                >
+                  <option v-for="agent in agentList" :key="agent" :value="agent">{{ agent }}</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Two Column Row 5 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Team -->
+              <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Đội tuyển</label>
+                <select 
+                  v-model="playerForm.teamId" 
+                  class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff4655] transition font-bold cursor-pointer"
+                >
+                  <option value="">Tự do</option>
+                  <option v-for="t in adminTeams" :key="t.id" :value="t.id">{{ t.name }}</option>
+                </select>
+              </div>
+
+              <!-- Is Captain checkbox container -->
+              <div class="flex items-center gap-3 h-full pt-6">
+                <input 
+                  id="isCaptain"
+                  v-model="playerForm.isCaptain" 
+                  type="checkbox" 
+                  class="w-5 h-5 rounded bg-[#0b0e14] border-white/10 text-[#ff4655] focus:ring-0 cursor-pointer"
+                />
+                <label for="isCaptain" class="text-sm font-bold text-gray-300 cursor-pointer select-none">Đóng vai trò Đội trưởng</label>
+              </div>
+            </div>
+
+            <!-- Preferred Roles (Checkbox selection) -->
+            <div>
+              <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Vai trò sở trường</label>
+              <div class="flex flex-wrap gap-4 bg-[#0b0e14] border border-white/10 rounded-xl p-4">
+                <label 
+                  v-for="role in rolesList" 
+                  :key="role" 
+                  class="flex items-center gap-2 text-sm font-semibold text-gray-300 cursor-pointer select-none"
+                >
+                  <input 
+                    type="checkbox" 
+                    :value="role" 
+                    v-model="playerForm.preferredRoles" 
+                    class="w-4 h-4 rounded bg-[#0b0e14] border-white/10 text-[#ff4655] focus:ring-0 cursor-pointer"
+                  />
+                  <span>{{ role }}</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Strengths -->
+            <div>
+              <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Điểm mạnh / Lối chơi</label>
+              <textarea 
+                v-model="playerForm.strengths" 
+                rows="3"
+                placeholder="Mô tả điểm mạnh, lối chơi của tuyển thủ..." 
+                class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff4655] transition resize-none font-medium"
+              ></textarea>
+            </div>
+
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="px-6 py-4 border-t border-white/5 bg-white/2 flex items-center justify-end gap-3">
+            <button 
+              type="button" 
+              @click="showPlayerModal = false"
+              class="px-5 py-3 rounded-lg border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition font-semibold"
+            >
+              Hủy
+            </button>
+            <button 
+              type="submit" 
+              class="px-6 py-3 rounded-lg bg-[#ff4655] hover:bg-[#ff5e6b] text-white font-bold transition"
+            >
+              {{ isEditingPlayer ? 'Lưu thay đổi' : 'Thêm tuyển thủ' }}
             </button>
           </div>
         </form>
