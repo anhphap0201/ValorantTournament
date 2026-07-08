@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useTournament } from '../composables/useTournament.js'
 
 const { 
@@ -14,16 +15,19 @@ const {
   clearMessages 
 } = useTournament()
 
+const router = useRouter()
+const isAdmin = ref(false)
+
 // Sidebar states
 const isSidebarCollapsed = ref(false)
-const currentTab = ref('tournaments') // tabs: tournaments, players, teams, settings
+const currentTab = ref('tournaments') // tabs: tournaments, players, teams, users, settings
 
-// Modal states
+// Modal states for tournament
 const showCreateModal = ref(false)
 const isEditing = ref(false)
 const selectedTournamentId = ref(null)
 
-// Form states
+// Form states for tournament
 const form = ref({
   name: '',
   description: '',
@@ -77,9 +81,145 @@ const resetFilters = () => {
   formatFilter.value = 'all'
 }
 
+// User Management States
+const users = ref([])
+const usersLoading = ref(false)
+const usersError = ref(null)
+const usersSuccess = ref(null)
+const showCreateUserModal = ref(false)
+
+const userForm = ref({
+  username: '',
+  email: '',
+  password: '',
+  role: 'guest'
+})
+
+const checkAdminAccess = () => {
+  const storedUser = localStorage.getItem('user')
+  if (!storedUser) {
+    isAdmin.value = false
+    return false
+  }
+  const userObj = JSON.parse(storedUser)
+  if (userObj.role !== 'admin') {
+    isAdmin.value = false
+    return false
+  }
+  isAdmin.value = true
+  return true
+}
+
+const fetchUsers = async () => {
+  usersLoading.value = true
+  usersError.value = null
+  try {
+    const response = await fetch('http://localhost:3000/api/users')
+    if (!response.ok) {
+      throw new Error('Không thể tải danh sách tài khoản.')
+    }
+    const data = await response.json()
+    users.value = data
+  } catch (err) {
+    usersError.value = err.message
+  } finally {
+    usersLoading.value = false
+  }
+}
+
+const handleCreateUser = async () => {
+  usersError.value = null
+  usersSuccess.value = null
+  
+  if (!userForm.value.username.trim() || !userForm.value.email.trim() || !userForm.value.password.trim()) {
+    usersError.value = 'Vui lòng điền đầy đủ các thông tin bắt buộc.'
+    return
+  }
+
+  try {
+    const response = await fetch('http://localhost:3000/api/users', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(userForm.value)
+    })
+
+    const data = await response.json()
+    if (!response.ok) {
+      throw new Error(data.error || 'Thêm tài khoản thất bại.')
+    }
+
+    usersSuccess.value = 'Thêm tài khoản thành công!'
+    showCreateUserModal.value = false
+    userForm.value = {
+      username: '',
+      email: '',
+      password: '',
+      role: 'guest'
+    }
+    await fetchUsers()
+  } catch (err) {
+    usersError.value = err.message
+  }
+}
+
+const handleDeleteUser = async (userId, usernameToDelete) => {
+  if (usernameToDelete === 'admin') {
+    alert('Không thể xóa tài khoản admin gốc.')
+    return
+  }
+
+  if (confirm(`Bạn có chắc chắn muốn xóa tài khoản "${usernameToDelete}"?`)) {
+    try {
+      const response = await fetch(`http://localhost:3000/api/users/${userId}`, {
+        method: 'DELETE'
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'Xóa tài khoản thất bại.')
+      }
+      alert('Xóa tài khoản thành công!')
+      await fetchUsers()
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+}
+
+const changeUserRole = async (userId, newRole, username) => {
+  if (username === 'admin') {
+    alert('Không thể thay đổi vai trò của tài khoản quản trị gốc.')
+    return
+  }
+
+  try {
+    const response = await fetch(`http://localhost:3000/api/users/${userId}/role`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ role: newRole })
+    })
+
+    const data = await response.json()
+    if (!response.ok) {
+      throw new Error(data.error || 'Cập nhật vai trò thất bại.')
+    }
+    alert(`Đã cập nhật vai trò của "${username}" thành công!`)
+  } catch (err) {
+    alert(err.message)
+    await fetchUsers()
+  }
+}
+
 // Lifecycle
 onMounted(() => {
-  fetchTournaments()
+  const isAuth = checkAdminAccess()
+  if (isAuth) {
+    fetchTournaments()
+    fetchUsers()
+  }
 })
 
 // Methods
@@ -108,7 +248,6 @@ const openEditModal = (t) => {
   isEditing.value = true
   selectedTournamentId.value = t.id
   
-  // Format dates for input datetime-local: YYYY-MM-DDThh:mm
   const formatDateTime = (dateStr) => {
     if (!dateStr) return ''
     const d = new Date(dateStr)
@@ -153,7 +292,6 @@ const handleFormSubmit = async () => {
     showCreateModal.value = false
     await fetchTournaments()
   } catch (err) {
-    // Error state in composable updates automatically
   }
 }
 
@@ -187,7 +325,7 @@ const formatDate = (dateStr) => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#0b0e14] text-white flex">
+  <div v-if="isAdmin" class="min-h-screen bg-[#0b0e14] text-white flex">
     
     <!-- Collapsible Sidebar -->
     <aside 
@@ -240,6 +378,16 @@ const formatDate = (dateStr) => {
         >
           <i class="fas fa-shield-alt text-lg w-5 text-center"></i>
           <span v-if="!isSidebarCollapsed" class="animate-fadeIn">Đội tuyển</span>
+        </button>
+
+        <!-- Users Tab -->
+        <button 
+          @click="currentTab = 'users'"
+          class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition duration-200 font-bold text-sm text-left"
+          :class="currentTab === 'users' ? 'bg-[#ff4655] text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'"
+        >
+          <i class="fas fa-user-cog text-lg w-5 text-center"></i>
+          <span v-if="!isSidebarCollapsed" class="animate-fadeIn">Tài khoản</span>
         </button>
 
         <!-- Settings Tab -->
@@ -480,6 +628,90 @@ const formatDate = (dateStr) => {
         </div>
       </div>
 
+      <!-- Section: User Account Management -->
+      <div v-else-if="currentTab === 'users'" class="space-y-8 text-left animate-fadeIn">
+        
+        <!-- Header Actions -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[#0f131a]/60 border border-white/5 p-4 rounded-2xl">
+          <div>
+            <h3 class="text-xl font-bold font-valorant text-white tracking-wide">Quản lý Tài khoản</h3>
+            <p class="text-xs text-gray-400 mt-1">Danh sách tất cả các tài khoản người dùng đăng ký trên hệ thống</p>
+          </div>
+          <button 
+            @click="showCreateUserModal = true; usersError = null; usersSuccess = null;"
+            class="bg-[#ff4655] hover:bg-[#ff5e6b] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition font-bold cursor-pointer flex items-center gap-2"
+          >
+            <i class="fas fa-user-plus"></i> Thêm Tài Khoản Mới
+          </button>
+        </div>
+
+        <!-- Users Table -->
+        <div class="bg-[#0f131a]/40 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-md">
+          <div v-if="usersLoading" class="p-20 text-center text-gray-400 flex flex-col items-center justify-center gap-3">
+            <div class="w-8 h-8 rounded-full border-2 border-dashed border-[#ff4655] animate-spin"></div>
+            <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Đang tải danh sách tài khoản...</span>
+          </div>
+
+          <div v-else-if="users.length === 0" class="p-20 text-center text-gray-500">
+            Không có tài khoản nào.
+          </div>
+
+          <div v-else class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-white/5 bg-white/2 text-gray-400 text-xs font-bold uppercase tracking-wider select-none">
+                  <th class="py-4.5 px-6 text-center">Thao tác</th>
+                  <th class="py-4.5 px-6">ID</th>
+                  <th class="py-4.5 px-6">Tên đăng nhập</th>
+                  <th class="py-4.5 px-6">Email</th>
+                  <th class="py-4.5 px-6">Vai trò</th>
+                  <th class="py-4.5 px-6">Ngày tạo</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5 text-sm text-gray-300 font-semibold">
+                <tr 
+                  v-for="u in users" 
+                  :key="u.id"
+                  class="hover:bg-white/2 transition duration-150"
+                >
+                  <td class="py-2 px-6">
+                    <div class="flex items-center justify-center">
+                      <button 
+                        @click="handleDeleteUser(u.id, u.username)"
+                        :disabled="u.username === 'admin'"
+                        class="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs uppercase tracking-wider transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                        title="Xóa tài khoản"
+                      >
+                        <i class="fas fa-trash-alt"></i> Xóa
+                      </button>
+                    </div>
+                  </td>
+                  <td class="py-4 px-6 text-gray-500 font-bold">#{{ u.id }}</td>
+                  <td class="py-4 px-6 text-white font-bold">{{ u.username }}</td>
+                  <td class="py-4 px-6 text-gray-300">{{ u.email }}</td>
+                  <td class="py-4 px-6">
+                    <select 
+                      v-model="u.role" 
+                      @change="changeUserRole(u.id, u.role, u.username)"
+                      :disabled="u.username === 'admin'"
+                      class="bg-[#0b0e14] border border-white/10 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-[#ff4655] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                      <option value="guest">Khách</option>
+                      <option value="player">Tuyển thủ</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </td>
+                  <td class="py-4 px-6 text-xs text-gray-400 font-bold">
+                    {{ formatDate(u.created_at) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
       <!-- Section Placeholder for Other Tabs -->
       <div v-else class="h-[80vh] flex flex-col items-center justify-center text-center text-gray-500">
         <div class="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
@@ -646,6 +878,128 @@ const formatDate = (dateStr) => {
       </div>
     </div>
 
+    <!-- Create User Modal -->
+    <div 
+      v-if="showCreateUserModal" 
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn"
+    >
+      <div class="bg-[#0f131a] border border-white/5 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-scaleIn text-left">
+        <!-- Modal Header -->
+        <div class="px-6 py-5 border-b border-white/5 flex items-center justify-between bg-white/2">
+          <h3 class="text-lg font-bold uppercase tracking-wider font-valorant text-[#ff4655]">
+            Thêm Tài Khoản Mới
+          </h3>
+          <button 
+            @click="showCreateUserModal = false"
+            class="text-gray-400 hover:text-white transition p-1 hover:bg-white/5 rounded-lg"
+          >
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+
+        <!-- Modal Form -->
+        <form @submit.prevent="handleCreateUser">
+          <div class="p-6 space-y-4">
+            <!-- Error message -->
+            <div v-if="usersError" class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold">
+              {{ usersError }}
+            </div>
+
+            <!-- Username -->
+            <div>
+              <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Tên Đăng Nhập <span class="text-[#ff4655]">*</span></label>
+              <input 
+                v-model="userForm.username" 
+                type="text" 
+                required
+                placeholder="Nhập tên đăng nhập..." 
+                class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#ff4655] transition font-bold"
+              />
+            </div>
+
+            <!-- Email -->
+            <div>
+              <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Địa Chỉ Email <span class="text-[#ff4655]">*</span></label>
+              <input 
+                v-model="userForm.email" 
+                type="email" 
+                required
+                placeholder="Nhập email..." 
+                class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#ff4655] transition font-bold"
+              />
+            </div>
+
+            <!-- Password -->
+            <div>
+              <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Mật Khẩu <span class="text-[#ff4655]">*</span></label>
+              <input 
+                v-model="userForm.password" 
+                type="password" 
+                required
+                placeholder="Nhập mật khẩu..." 
+                class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#ff4655] transition font-bold"
+              />
+            </div>
+
+            <!-- Role selection -->
+            <div>
+              <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Vai Trò</label>
+              <select 
+                v-model="userForm.role" 
+                class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#ff4655] transition font-bold cursor-pointer"
+              >
+                <option value="guest">Khách (Guest)</option>
+                <option value="player">Tuyển thủ (Player)</option>
+                <option value="admin">Quản trị viên (Admin)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="px-6 py-4 border-t border-white/5 bg-white/2 flex items-center justify-end gap-3">
+            <button 
+              type="button" 
+              @click="showCreateUserModal = false"
+              class="px-4 py-2.5 rounded-lg border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition font-semibold"
+            >
+              Hủy
+            </button>
+            <button 
+              type="submit" 
+              class="px-5 py-2.5 rounded-lg bg-[#ff4655] hover:bg-[#ff5e6b] text-white font-bold transition"
+            >
+              Thêm Tài Khoản
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Access Denied Screen -->
+  <div v-else class="min-h-[calc(100vh-4rem)] bg-val-dark flex flex-col items-center justify-center p-6 text-center select-none w-full">
+    <div class="max-w-md w-full glass-card p-10 rounded-2xl border border-red-500/20 shadow-2xl relative">
+      <!-- Decorative crosshairs -->
+      <div class="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-[#ff4655]"></div>
+      <div class="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-[#ff4655]"></div>
+      <div class="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-[#ff4655]"></div>
+      <div class="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-[#ff4655]"></div>
+      
+      <div class="w-20 h-20 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto mb-6 text-[#ff4655] animate-pulse">
+        <i class="fas fa-shield-alt text-3xl"></i>
+      </div>
+      <h2 class="text-2xl font-black font-valorant text-[#ff4655] tracking-widest uppercase mb-3">ACCESS DENIED</h2>
+      <p class="text-gray-400 text-sm mb-8 leading-relaxed">
+        Bạn không có quyền truy cập vào trang quản trị này. Vui lòng liên hệ quản trị viên hoặc quay lại trang chủ.
+      </p>
+      <router-link 
+        to="/" 
+        class="inline-block w-full val-btn-red py-3 px-4 font-bold rounded uppercase tracking-wider text-sm text-center"
+      >
+        QUAY LẠI TRANG CHỦ
+      </router-link>
+    </div>
   </div>
 </template>
 

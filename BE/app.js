@@ -9,6 +9,8 @@ app.use(express.json());
 // Import routes
 const playerRoutes = require("./routes/playerRoutes.js");
 const tournamentRoutes = require("./routes/tournamentRoutes.js");
+const authRoutes = require("./routes/authRoutes.js");
+const userRoutes = require("./routes/userRoutes.js");
 
 function logger(req, res, next) {
   console.log(`${req.method} ${req.url}`);
@@ -24,6 +26,8 @@ app.get("/", (req, res) => {
 // Mount CRUD routes
 app.use("/api/players", playerRoutes);
 app.use("/api/tournaments", tournamentRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 
 
 app.listen(3000, () => {
