@@ -20,56 +20,69 @@
         <h1 class="text-3xl font-extrabold font-valorant text-white">Hồ sơ</h1>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
           
           <!-- Left Column: User details & Change Password -->
-          <div class="space-y-8">
+          <div class="flex flex-col gap-8 h-full">
             
             <!-- Profile details -->
-            <div class="glass-card rounded-lg p-6 border border-white/5" v-if="currentUser">
-              <div class="flex items-center gap-4 mb-6 pb-6 border-b border-white/10">
-                <div class="w-16 h-16 rounded-full bg-red-500/10 border-2 border-[#ff4655] flex items-center justify-center text-white text-2xl font-valorant font-bold glow-red overflow-hidden shrink-0">
-                  <img v-if="playerProfile && playerProfile.avatar" :src="playerProfile.avatar" class="w-full h-full object-cover" />
-                  <span v-else>{{ avatarChar }}</span>
+            <div class="glass-card rounded-lg p-6 border border-white/5 flex flex-col justify-between flex-grow" v-if="currentUser">
+              <div>
+                <div class="flex items-center gap-4 mb-6 pb-6 border-b border-white/10">
+                  <div class="w-16 h-16 rounded-full bg-red-500/10 border-2 border-[#ff4655] flex items-center justify-center text-white text-2xl font-valorant font-bold glow-red overflow-hidden shrink-0">
+                    <img v-if="captainAvatar" :src="captainAvatar" class="w-full h-full object-cover" />
+                    <span v-else>{{ avatarChar }}</span>
+                  </div>
+                  <div>
+                    <h3 class="text-lg font-bold text-white mb-1">{{ currentUser.username }}</h3>
+                    <!-- Dynamic styled badge for user role -->
+                    <span :class="userRoleInfo.colorClass" class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-bold uppercase border">
+                      <i :class="'fa-solid ' + userRoleInfo.icon" class="text-[10px]"></i>
+                      {{ userRoleInfo.label }}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <h3 class="text-lg font-bold text-white mb-1">{{ currentUser.username }}</h3>
-                  <!-- Dynamic styled badge for user role -->
-                  <span :class="userRoleInfo.colorClass" class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-bold uppercase border">
-                    <i :class="'fa-solid ' + userRoleInfo.icon" class="text-[10px]"></i>
-                    {{ userRoleInfo.label }}
-                  </span>
-                </div>
-              </div>
 
-              <div class="space-y-4 text-sm text-left">
-                <div>
-                  <span class="block text-xs text-gray-500 uppercase font-semibold mb-0.5">Tên tài khoản</span>
-                  <span class="font-medium text-white text-xs tracking-wide">{{ currentUser.username }}</span>
-                </div>
-                <div>
-                  <span class="block text-xs text-gray-500 uppercase font-semibold mb-0.5">Địa chỉ Email</span>
-                  <span class="font-medium text-white text-xs tracking-wide">{{ currentUser.email || 'N/A' }}</span>
-                </div>
-                <div>
-                  <span class="block text-xs text-gray-500 uppercase font-semibold mb-0.5">Ngày tham gia</span>
-                  <span class="font-medium text-white text-xs tracking-wide">{{ joinDateFormatted }}</span>
+                <div class="space-y-4 text-sm text-left">
+                  <div>
+                    <span class="block text-xs text-gray-500 uppercase font-semibold mb-0.5">Tên tài khoản</span>
+                    <span class="font-medium text-white text-xs tracking-wide">{{ currentUser.username }}</span>
+                  </div>
+                  <div>
+                    <span class="block text-xs text-gray-500 uppercase font-semibold mb-0.5">Địa chỉ Email</span>
+                    <span class="font-medium text-white text-xs tracking-wide">{{ currentUser.email || 'N/A' }}</span>
+                  </div>
+                  <div>
+                    <span class="block text-xs text-gray-500 uppercase font-semibold mb-0.5">Ngày tham gia</span>
+                    <span class="font-medium text-white text-xs tracking-wide">{{ joinDateFormatted }}</span>
+                  </div>
                 </div>
               </div>
               
-              <div class="mt-6 pt-6 border-t border-white/10">
+              <div class="mt-6 pt-6 border-t border-white/10 flex flex-col gap-3">
                 <router-link 
                   to="/register-player"
-                  class="w-full block text-center bg-[#ff4655] hover:bg-[#ff5e6b] text-white px-4 py-2.5 rounded text-sm font-bold uppercase tracking-wider transition duration-200 shadow-md shadow-[#ff4655]/20"
+                  class="w-full block text-center bg-[#ff4655] hover:bg-[#ff5e6b] text-white px-4 py-2.5 rounded text-sm font-bold uppercase tracking-wider transition duration-200 shadow-md shadow-[#ff4655]/20 font-valorant"
                 >
                   {{ isRegistered ? 'Cập nhật thông tin đăng ký' : 'Đăng ký giải đấu' }}
                 </router-link>
+
+                <button 
+                  v-if="!showPasswordForm"
+                  @click="showPasswordForm = true"
+                  class="w-full text-center bg-white/5 hover:bg-[#ff4655] border border-white/10 hover:border-transparent text-white px-4 py-2.5 rounded text-sm font-bold uppercase tracking-wider transition duration-200 font-valorant cursor-pointer"
+                >
+                  Đổi mật khẩu
+                </button>
               </div>
             </div>
 
-            <!-- Change Password form -->
-            <div class="glass-card rounded-lg p-6 border border-white/5 text-left">
-              <h3 class="text-md font-bold font-valorant text-white mb-4 uppercase text-[#ff4655] tracking-wider">Đổi mật khẩu</h3>
+            <!-- Change Password collapsible form (outside Profile details, only visible when active) -->
+            <div v-if="showPasswordForm" class="glass-card rounded-lg p-6 border border-white/5 text-left animate-fadeIn">
+              <div class="flex items-center justify-between mb-4 border-b border-white/10 pb-2">
+                <h3 class="text-md font-bold font-valorant text-white uppercase text-[#ff4655] tracking-wider">Đổi mật khẩu</h3>
+                <button @click="showPasswordForm = false" class="text-xs text-gray-500 hover:text-white transition font-semibold cursor-pointer">Hủy</button>
+              </div>
               
               <form @submit.prevent="handleChangePassword" class="space-y-4">
                 <div>
@@ -90,9 +103,12 @@
                   </div>
                 </div>
 
-                <div class="flex justify-end pt-2">
-                  <button :disabled="passwordLoading" type="submit" class="bg-white/5 hover:bg-[#ff4655] border border-white/10 hover:border-transparent px-6 py-2.5 rounded text-white text-xs font-bold uppercase tracking-wider transition cursor-pointer">
-                    {{ passwordLoading ? 'Đang xử lý...' : 'Cập nhật mật khẩu' }}
+                <div class="flex justify-end gap-2 pt-2">
+                  <button type="button" @click="showPasswordForm = false" class="px-4 py-2 rounded text-gray-400 hover:text-white transition text-xs font-bold uppercase cursor-pointer">
+                    Hủy
+                  </button>
+                  <button :disabled="passwordLoading" type="submit" class="bg-[#ff4655] hover:bg-[#ff5e6b] px-6 py-2.5 rounded text-white text-xs font-bold uppercase tracking-wider transition cursor-pointer">
+                    {{ passwordLoading ? 'Đang xử lý...' : 'Cập nhật' }}
                   </button>
                 </div>
               </form>
@@ -100,43 +116,59 @@
 
           </div>
 
-          <!-- Right Column: Player Registration Info -->
-          <div class="lg:col-span-2 space-y-8">
+           <!-- Right Column: Player Registration Info -->
+          <div class="lg:col-span-2 h-full">
             
             <!-- Player Registration Info (Visible only if isRegistered and playerProfile exists) -->
-            <div v-if="isRegistered && playerProfile" class="glass-card rounded-lg p-6 border border-white/5">
+            <div v-if="isRegistered && playerProfile" class="glass-card rounded-lg border border-white/5 overflow-hidden h-full flex flex-col">
               
-              <!-- Team Details Header and Tabs -->
-              <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-white/10 text-left">
-                <div class="flex items-center gap-3">
-                  <div class="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
-                    <img v-if="userTeam && userTeam.logo" :src="userTeam.logo" class="w-full h-full object-cover" />
-                    <i v-else class="fas fa-shield-alt text-[#00f599] text-xl animate-pulse"></i>
-                  </div>
-                  <div>
-                    <span class="block text-[10px] text-gray-500 uppercase font-bold tracking-wider leading-none">Hồ sơ giải đấu / Đội tuyển</span>
-                    <span class="font-extrabold text-white text-lg tracking-wider font-valorant mt-1.5 block">{{ userTeam ? userTeam.name : 'N/A' }}</span>
-                  </div>
-                </div>
-                
-                <!-- 5 Member Tabs -->
-                <div class="flex flex-wrap gap-1 bg-[#0b0e14]/80 p-1 rounded-xl border border-white/5">
-                  <button 
-                    v-for="(member, idx) in teamMembers" 
-                    :key="member.id"
-                    type="button"
-                    @click="activeMemberIndex = idx"
-                    class="px-3 py-2 rounded-lg text-xs font-bold transition-all duration-150 uppercase font-valorant cursor-pointer"
-                    :class="[
-                      activeMemberIndex === idx 
-                        ? 'bg-[#ff4655] text-white shadow-lg shadow-[#ff4655]/20' 
-                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                    ]"
-                  >
-                    {{ member.is_captain ? '★ ' : '' }}{{ member.nickname }}
-                  </button>
-                </div>
+              <!-- 5 Member Tabs - Full Width Bar at the very top -->
+              <div class="grid grid-cols-5 bg-[#0b0e14]/80 border-b border-white/5 p-1 shrink-0">
+                <button 
+                  v-for="(member, idx) in teamMembers" 
+                  :key="member.id"
+                  type="button"
+                  @click="activeMemberIndex = idx"
+                  class="py-3 rounded-lg text-[10px] sm:text-xs font-bold transition-all duration-150 uppercase font-valorant cursor-pointer text-center"
+                  :class="[
+                    activeMemberIndex === idx 
+                      ? 'bg-[#ff4655] text-white shadow-lg shadow-[#ff4655]/20' 
+                      : 'text-gray-400 hover:text-white hover:bg-white/2'
+                  ]"
+                >
+                  {{ member.is_captain ? '★ ' : '' }}{{ member.nickname }}
+                </button>
               </div>
+
+              <div class="p-6 flex-grow flex flex-col justify-between">
+                <!-- Team Details Header -->
+                <div class="flex items-center justify-between gap-4 mb-6 pb-6 border-b border-white/10 text-left">
+                  <!-- Left side: Team details -->
+                  <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                      <img v-if="userTeam && userTeam.logo" :src="userTeam.logo" class="w-full h-full object-cover" />
+                      <i v-else class="fas fa-shield-alt text-[#00f599] text-xl animate-pulse"></i>
+                    </div>
+                    <div>
+                      <span class="block text-[10px] text-gray-500 uppercase font-bold tracking-wider leading-none">Hồ sơ giải đấu / Đội tuyển</span>
+                      <span class="font-extrabold text-white text-lg tracking-wider font-valorant mt-1.5 block">{{ userTeam ? userTeam.name : 'N/A' }}</span>
+                    </div>
+                  </div>
+
+                  <!-- Right side: Selected Member details (Avatar + Name) -->
+                  <div v-if="playerProfile" class="flex items-center gap-3 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 max-w-[180px] sm:max-w-xs shrink-0">
+                    <div class="w-8 h-8 rounded-full bg-red-500/10 border border-[#ff4655]/50 overflow-hidden flex items-center justify-center text-white text-[10px] font-bold font-valorant shrink-0">
+                      <img v-if="playerProfile.avatar" :src="playerProfile.avatar" class="w-full h-full object-cover" />
+                      <span v-else>{{ playerProfile.nickname ? playerProfile.nickname[0].toUpperCase() : '?' }}</span>
+                    </div>
+                    <div class="min-w-0">
+                      <span class="block text-[8px] text-gray-500 uppercase font-bold tracking-wider leading-none">Tuyển thủ</span>
+                      <span class="block font-bold text-white text-xs truncate mt-0.5" :title="playerProfile.nickname">
+                        {{ playerProfile.nickname }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               
               <!-- Selected Player Details -->
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-left animate-fadeIn" :key="activeMemberIndex">
@@ -212,9 +244,10 @@
                 <p class="text-gray-300 text-xs italic bg-white/5 p-3 rounded-lg border border-white/5 leading-relaxed">{{ playerProfile.strengths }}</p>
               </div>
             </div>
-
+          </div>
+            
             <!-- Fallback if not registered -->
-            <div v-else class="glass-card rounded-lg p-12 border border-white/5 text-center flex flex-col items-center justify-center gap-4">
+            <div v-else class="glass-card rounded-lg p-12 border border-white/5 text-center flex flex-col items-center justify-center gap-4 h-full">
               <div class="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 text-2xl">
                 <i class="fas fa-trophy text-[#ff4655]"></i>
               </div>
@@ -315,6 +348,11 @@ const playerProfile = computed(() => {
   return teamMembers.value[activeMemberIndex.value] || null
 })
 
+const captainAvatar = computed(() => {
+  const captain = teamMembers.value.find(m => m.is_captain)
+  return captain?.avatar || null
+})
+
 const fetchPlayerTeam = async () => {
   if (!currentUser.value) return
   
@@ -403,6 +441,7 @@ const oldPassword = ref('')
 const newPassword = ref('')
 const confirmNewPassword = ref('')
 const passwordLoading = ref(false)
+const showPasswordForm = ref(false)
 
 const handleChangePassword = async () => {
   if (newPassword.value !== confirmNewPassword.value) {
@@ -437,6 +476,7 @@ const handleChangePassword = async () => {
     oldPassword.value = ''
     newPassword.value = ''
     confirmNewPassword.value = ''
+    showPasswordForm.value = false
   } catch (err) {
     errorMessage.value = err.message
   } finally {

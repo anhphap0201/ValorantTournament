@@ -27,7 +27,9 @@ const Team = {
         c.favorite_agent as captain_favorite_agent,
         c.full_name as captain_full_name,
         c.riot_id as captain_riot_id,
-        c.strengths as captain_strengths
+        c.strengths as captain_strengths,
+        c.facebook_link as captain_facebook_link,
+        c.gender as captain_gender
       FROM teams t
       LEFT JOIN players c ON t.id = c.team_id AND c.is_captain = true
     `;
@@ -62,6 +64,8 @@ const Team = {
           full_name: team.captain_full_name,
           riot_id: team.captain_riot_id,
           strengths: team.captain_strengths,
+          facebook_link: team.captain_facebook_link,
+          gender: team.captain_gender,
           is_captain: true
         };
       } else {
@@ -77,6 +81,8 @@ const Team = {
       delete team.captain_full_name;
       delete team.captain_riot_id;
       delete team.captain_strengths;
+      delete team.captain_facebook_link;
+      delete team.captain_gender;
     }
     
     return teamsList;
@@ -93,7 +99,9 @@ const Team = {
         c.favorite_agent as captain_favorite_agent,
         c.full_name as captain_full_name,
         c.riot_id as captain_riot_id,
-        c.strengths as captain_strengths
+        c.strengths as captain_strengths,
+        c.facebook_link as captain_facebook_link,
+        c.gender as captain_gender
       FROM teams t
       LEFT JOIN players c ON t.id = c.team_id AND c.is_captain = true
       WHERE t.id = $1
@@ -121,6 +129,8 @@ const Team = {
         full_name: team.captain_full_name,
         riot_id: team.captain_riot_id,
         strengths: team.captain_strengths,
+        facebook_link: team.captain_facebook_link,
+        gender: team.captain_gender,
         is_captain: true
       };
     } else {
@@ -135,6 +145,8 @@ const Team = {
     delete team.captain_full_name;
     delete team.captain_riot_id;
     delete team.captain_strengths;
+    delete team.captain_facebook_link;
+    delete team.captain_gender;
 
     return team;
   },
