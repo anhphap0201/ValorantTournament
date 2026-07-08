@@ -9,7 +9,7 @@
 
 <div class="hidden md:flex items-center space-x-6 h-full">
   <router-link
-    v-for="link in navLinks"
+    v-for="link in filteredNavLinks"
     :key="link.path"
     :to="link.path"
     class="text-gray-300 hover:text-[#ff4655] transition h-full flex items-center border-b-2 border-transparent hover:border-[#ff4655]/50 px-1 font-bold text-sm"
@@ -62,7 +62,7 @@
   class="md:hidden absolute top-16 left-0 w-full bg-[#0b131a] border-b border-white/10 shadow-xl p-4 flex flex-col space-y-4"
 >
   <router-link
-    v-for="link in navLinks"
+    v-for="link in filteredNavLinks"
     :key="link.path"
     :to="link.path"
     @click="mobileMenuOpen = false"
@@ -103,7 +103,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
@@ -142,6 +142,15 @@ const navLinks = [
   { name: "Giải đấu", path: "/tournaments" },
   { name: "Quản trị", path: "/admin" },
 ];
+
+const filteredNavLinks = computed(() => {
+  return navLinks.filter(link => {
+    if (link.path === '/admin') {
+      return isLoggedIn.value && user.value && user.value.role === 'admin';
+    }
+    return true;
+  });
+});
 
 onMounted(() => {
   checkLoginStatus();

@@ -78,7 +78,7 @@ const routes = [
     path: '/admin',
     name: 'Admin',
     component: Admin,
-    // meta: { requiresAuth: true, requiresAdmin: true }
+    meta: { requiresAdmin: true }
   },
   // Fallback redirect to Home
   {
@@ -92,9 +92,19 @@ const router = createRouter({
   routes
 });
 
-// Navigation Guard bypassed for frontend-only mode
+// Navigation Guard to restrict Admin route
 router.beforeEach((to, from, next) => {
-  next();
+  const user = JSON.parse(localStorage.getItem('user'));
+  
+  if (to.meta.requiresAdmin) {
+    if (user && user.role === 'admin') {
+      next();
+    } else {
+      next('/login');
+    }
+  } else {
+    next();
+  }
 });
 
 export default router;
