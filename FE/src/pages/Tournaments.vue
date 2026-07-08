@@ -38,7 +38,7 @@
       <!-- Tab 3: Đội tuyển -->
       <TournamentTeams 
         v-else-if="activeTab === 'teams'" 
-        :teams="teams" 
+        :teams="apiTeams && apiTeams.length ? apiTeams : teams" 
         :loading="loadingTeams" 
       />
 
@@ -58,6 +58,9 @@ import TournamentTeams from '../components/tournament/TournamentTeams.vue'
 import TournamentRules from '../components/tournament/TournamentRules.vue'
 
 const { tournaments, loading: loadingTournament, fetchTournaments } = useTournament()
+import { useTeam } from '../composables/useTeam.js'
+
+const { teams: apiTeams, loading: loadingTeams, fetchTeams } = useTeam()
 
 const tournament = ref(null)
 const activeTab = ref('intro')
@@ -71,8 +74,6 @@ const tabs = [
 const selectTab = (tabId) => {
   activeTab.value = tabId
 }
-
-const loadingTeams = ref(false)
 
 const teams = ref([
   {
@@ -197,6 +198,12 @@ onMounted(async () => {
   if (tournaments.value.length > 0) {
     const active = tournaments.value.find(t => t.status === 'register' || t.status === 'running')
     tournament.value = active || tournaments.value[0]
+  }
+  
+  if (tournament.value) {
+    await fetchTeams(tournament.value.id)
+  } else {
+    await fetchTeams()
   }
 })
 </script>

@@ -11,6 +11,7 @@ const playerRoutes = require("./routes/playerRoutes.js");
 const tournamentRoutes = require("./routes/tournamentRoutes.js");
 const authRoutes = require("./routes/authRoutes.js");
 const userRoutes = require("./routes/userRoutes.js");
+const teamRoutes = require("./routes/teamRoutes.js");
 
 function logger(req, res, next) {
   console.log(`${req.method} ${req.url}`);
@@ -28,6 +29,7 @@ app.use("/api/players", playerRoutes);
 app.use("/api/tournaments", tournamentRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/teams", teamRoutes);
 
 
 app.listen(3000, () => {

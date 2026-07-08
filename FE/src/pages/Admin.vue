@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTournament } from '../composables/useTournament.js'
+import { useTeam } from '../composables/useTeam.js'
 
 const { 
   tournaments, 
@@ -214,11 +215,12 @@ const changeUserRole = async (userId, newRole, username) => {
 }
 
 // Lifecycle
-onMounted(() => {
+onMounted(async () => {
   const isAuth = checkAdminAccess()
   if (isAuth) {
-    fetchTournaments()
-    fetchUsers()
+    await fetchTournaments()
+    await fetchUsers()
+    await fetchTeams()
   }
 })
 
@@ -321,6 +323,97 @@ const formatDate = (dateStr) => {
     hour: '2-digit', 
     minute: '2-digit' 
   })
+}
+
+// Team management state & methods
+const {
+  teams: adminTeams,
+  loading: teamsLoading,
+  error: teamsError,
+  successMessage: teamsSuccess,
+  fetchTeams,
+  createTeam,
+  updateTeam,
+  deleteTeam,
+  clearMessages: clearTeamMessages
+} = useTeam()
+
+// Modal states for team
+const showTeamModal = ref(false)
+const isEditingTeam = ref(false)
+const selectedTeamId = ref(null)
+
+// Form states for team
+const teamForm = ref({
+  name: '',
+  logo: '',
+  tournamentId: '',
+  tokensRemaining: 1000
+})
+
+const openCreateTeamModal = () => {
+  isEditingTeam.value = false
+  selectedTeamId.value = null
+  teamForm.value = {
+    name: '',
+    logo: '',
+    tournamentId: tournaments.value.length > 0 ? tournaments.value[0].id : '',
+    tokensRemaining: 1000
+  }
+  clearTeamMessages()
+  showTeamModal.value = true
+}
+
+const openEditTeamModal = (team) => {
+  isEditingTeam.value = true
+  selectedTeamId.value = team.id
+  teamForm.value = {
+    name: team.name,
+    logo: team.logo || '',
+    tournamentId: team.tournament_id || '',
+    tokensRemaining: team.tokens_remaining !== undefined ? team.tokens_remaining : 1000
+  }
+  clearTeamMessages()
+  showTeamModal.value = true
+}
+
+const handleTeamFormSubmit = async () => {
+  if (!teamForm.value.name.trim()) return
+
+  const payload = {
+    name: teamForm.value.name,
+    logo: teamForm.value.logo || null,
+    tournamentId: teamForm.value.tournamentId || null,
+    tokensRemaining: parseInt(teamForm.value.tokensRemaining) !== undefined ? parseInt(teamForm.value.tokensRemaining) : 1000
+  }
+
+  try {
+    if (isEditingTeam.value) {
+      await updateTeam(selectedTeamId.value, payload)
+    } else {
+      await createTeam(payload)
+    }
+    showTeamModal.value = false
+    await fetchTeams()
+  } catch (err) {
+    alert(err.message)
+  }
+}
+
+const handleDeleteTeam = async (id) => {
+  if (confirm("Bạn có chắc chắn muốn xóa đội tuyển này? Thao tác này không thể hoàn tác.")) {
+    try {
+      await deleteTeam(id)
+      await fetchTeams()
+    } catch (err) {
+      alert("Xóa đội tuyển thất bại: " + err.message)
+    }
+  }
+}
+
+const getTournamentName = (tournamentId) => {
+  const t = tournaments.value.find(t => t.id === tournamentId)
+  return t ? t.name : 'Chưa gán'
 }
 </script>
 
@@ -712,6 +805,100 @@ const formatDate = (dateStr) => {
 
       </div>
 
+      <!-- Section: Teams Management -->
+      <div v-else-if="currentTab === 'teams'" class="space-y-8 text-left animate-fadeIn">
+        <!-- Header Actions -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[#0f131a]/60 border border-white/5 p-4 rounded-2xl">
+          <div>
+            <h3 class="text-xl font-bold font-valorant text-white tracking-wide">Quản lý Đội tuyển</h3>
+            <p class="text-xs text-gray-400 mt-1">Danh sách và đội hình các đội tuyển tham dự giải đấu</p>
+          </div>
+          <button 
+            @click="openCreateTeamModal"
+            class="bg-[#ff4655] hover:bg-[#ff5e6b] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition font-bold cursor-pointer flex items-center gap-2"
+          >
+            <i class="fas fa-plus"></i> Thêm Đội Tuyển Mới
+          </button>
+        </div>
+
+        <!-- Teams Table -->
+        <div class="bg-[#0f131a]/40 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-md">
+          <div v-if="teamsLoading" class="p-20 text-center text-gray-400 flex flex-col items-center justify-center gap-3">
+            <div class="w-8 h-8 rounded-full border-2 border-dashed border-[#ff4655] animate-spin"></div>
+            <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Đang tải danh sách đội tuyển...</span>
+          </div>
+
+          <div v-else-if="adminTeams.length === 0" class="p-20 text-center text-gray-500">
+            Chưa có đội tuyển nào được tạo.
+          </div>
+
+          <div v-else class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-white/5 bg-white/2 text-gray-400 text-xs font-bold uppercase tracking-wider select-none">
+                  <th class="py-4.5 px-6 text-center">Thao tác</th>
+                  <th class="py-4.5 px-6">ID</th>
+                  <th class="py-4.5 px-6">Đội tuyển</th>
+                  <th class="py-4.5 px-6">Giải đấu</th>
+                  <th class="py-4.5 px-6">Koin còn lại</th>
+                  <th class="py-4.5 px-6">Đội trưởng (Captain)</th>
+                  <th class="py-4.5 px-6">Số thành viên</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5 text-sm text-gray-300 font-semibold">
+                <tr 
+                  v-for="team in adminTeams" 
+                  :key="team.id"
+                  class="hover:bg-white/2 transition duration-150"
+                >
+                  <td class="py-2 px-6">
+                    <div class="flex items-center justify-center gap-2">
+                      <button 
+                        @click="openEditTeamModal(team)"
+                        class="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider transition flex items-center gap-1 cursor-pointer"
+                        title="Chỉnh sửa đội tuyển"
+                      >
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button 
+                        @click="handleDeleteTeam(team.id)"
+                        class="px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs uppercase tracking-wider transition flex items-center gap-1 cursor-pointer"
+                        title="Xóa đội tuyển"
+                      >
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                  <td class="py-4 px-6 text-gray-500 font-bold">#{{ team.id }}</td>
+                  <td class="py-4 px-6">
+                    <div class="flex items-center gap-3">
+                      <div class="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-xs text-gray-500 overflow-hidden shrink-0">
+                        <img v-if="team.logo" :src="team.logo" class="w-full h-full object-cover" />
+                        <i v-else class="fas fa-shield-alt text-sm"></i>
+                      </div>
+                      <span class="text-white font-bold text-base">{{ team.name }}</span>
+                    </div>
+                  </td>
+                  <td class="py-4 px-6 text-gray-400 font-bold">
+                    {{ getTournamentName(team.tournament_id) }}
+                  </td>
+                  <td class="py-4 px-6 text-[#fbbf24] font-bold font-valorant">
+                    {{ team.tokens_remaining }} Koin
+                  </td>
+                  <td class="py-4 px-6">
+                    <span v-if="team.captain" class="text-white font-bold">{{ team.captain.nickname }}</span>
+                    <span v-else class="text-gray-500 text-xs italic">Chưa chọn</span>
+                  </td>
+                  <td class="py-4 px-6 text-white font-bold">
+                    {{ team.members ? team.members.length : 0 }}/4
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- Section Placeholder for Other Tabs -->
       <div v-else class="h-[80vh] flex flex-col items-center justify-center text-center text-gray-500">
         <div class="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
@@ -969,6 +1156,95 @@ const formatDate = (dateStr) => {
               class="px-5 py-2.5 rounded-lg bg-[#ff4655] hover:bg-[#ff5e6b] text-white font-bold transition"
             >
               Thêm Tài Khoản
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <!-- Create / Edit Team Modal -->
+    <div 
+      v-if="showTeamModal" 
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn"
+    >
+      <div class="bg-[#0f131a] border border-white/5 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-scaleIn text-left">
+        <!-- Modal Header -->
+        <div class="px-6 py-5 border-b border-white/5 flex items-center justify-between bg-white/2">
+          <h3 class="text-lg font-bold uppercase tracking-wider font-valorant text-[#ff4655]">
+            {{ isEditingTeam ? 'Chỉnh sửa Đội tuyển' : 'Tạo Đội Tuyển Mới' }}
+          </h3>
+          <button 
+            @click="showTeamModal = false"
+            class="text-gray-400 hover:text-white transition p-1 hover:bg-white/5 rounded-lg"
+          >
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+
+        <!-- Modal Form -->
+        <form @submit.prevent="handleTeamFormSubmit">
+          <div class="p-6 space-y-5">
+            <!-- Team Name -->
+            <div>
+              <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Tên Đội tuyển <span class="text-[#ff4655]">*</span></label>
+              <input 
+                v-model="teamForm.name" 
+                type="text" 
+                required
+                placeholder="Nhập tên đội tuyển (ví dụ: T1 VALORANT)" 
+                class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff4655] transition font-bold"
+              />
+            </div>
+
+            <!-- Logo URL -->
+            <div>
+              <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Logo (URL ảnh)</label>
+              <input 
+                v-model="teamForm.logo" 
+                type="text" 
+                placeholder="https://example.com/logo.png" 
+                class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff4655] transition font-bold"
+              />
+            </div>
+
+            <!-- Tournament Selection -->
+            <div>
+              <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Giải đấu tham dự</label>
+              <select 
+                v-model="teamForm.tournamentId"
+                class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff4655] transition font-bold cursor-pointer"
+              >
+                <option value="">Không tham gia giải đấu nào</option>
+                <option v-for="t in tournaments" :key="t.id" :value="t.id">{{ t.name }}</option>
+              </select>
+            </div>
+
+            <!-- Tokens Remaining -->
+            <div>
+              <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Số Koin ban đầu</label>
+              <input 
+                v-model="teamForm.tokensRemaining" 
+                type="number" 
+                min="0"
+                max="10000"
+                class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff4655] transition font-bold"
+              />
+            </div>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="px-6 py-4 border-t border-white/5 bg-white/2 flex items-center justify-end gap-3">
+            <button 
+              type="button" 
+              @click="showTeamModal = false"
+              class="px-5 py-3 rounded-lg border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition font-semibold"
+            >
+              Hủy
+            </button>
+            <button 
+              type="submit" 
+              class="px-6 py-3 rounded-lg bg-[#ff4655] hover:bg-[#ff5e6b] text-white font-bold transition"
+            >
+              <span>{{ isEditingTeam ? 'Lưu thay đổi' : 'Tạo đội tuyển' }}</span>
             </button>
           </div>
         </form>
