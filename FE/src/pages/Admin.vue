@@ -87,7 +87,9 @@ const users = ref([])
 const usersLoading = ref(false)
 const usersError = ref(null)
 const usersSuccess = ref(null)
-const showCreateUserModal = ref(false)
+const showUserModal = ref(false)
+const isEditingUser = ref(false)
+const selectedUserId = ref(null)
 
 const userForm = ref({
   username: '',
@@ -128,18 +130,56 @@ const fetchUsers = async () => {
   }
 }
 
-const handleCreateUser = async () => {
+const openCreateUserModal = () => {
+  isEditingUser.value = false
+  selectedUserId.value = null
+  userForm.value = {
+    username: '',
+    email: '',
+    password: '',
+    role: 'guest'
+  }
+  usersError.value = null
+  usersSuccess.value = null
+  showUserModal.value = true
+}
+
+const openEditUserModal = (u) => {
+  isEditingUser.value = true
+  selectedUserId.value = u.id
+  userForm.value = {
+    username: u.username,
+    email: u.email,
+    password: '',
+    role: u.role || 'guest'
+  }
+  usersError.value = null
+  usersSuccess.value = null
+  showUserModal.value = true
+}
+
+const handleSubmitUser = async () => {
   usersError.value = null
   usersSuccess.value = null
   
-  if (!userForm.value.username.trim() || !userForm.value.email.trim() || !userForm.value.password.trim()) {
+  if (!userForm.value.username.trim() || !userForm.value.email.trim()) {
     usersError.value = 'Vui lòng điền đầy đủ các thông tin bắt buộc.'
     return
   }
 
+  if (!isEditingUser.value && !userForm.value.password.trim()) {
+    usersError.value = 'Mật khẩu là bắt buộc khi thêm mới.'
+    return
+  }
+
   try {
-    const response = await fetch('http://localhost:3000/api/users', {
-      method: 'POST',
+    const url = isEditingUser.value 
+      ? `http://localhost:3000/api/users/${selectedUserId.value}`
+      : 'http://localhost:3000/api/users'
+    const method = isEditingUser.value ? 'PUT' : 'POST'
+
+    const response = await fetch(url, {
+      method: method,
       headers: {
         'Content-Type': 'application/json'
       },
@@ -148,11 +188,11 @@ const handleCreateUser = async () => {
 
     const data = await response.json()
     if (!response.ok) {
-      throw new Error(data.error || 'Thêm tài khoản thất bại.')
+      throw new Error(data.error || (isEditingUser.value ? 'Cập nhật tài khoản thất bại.' : 'Thêm tài khoản thất bại.'))
     }
 
-    usersSuccess.value = 'Thêm tài khoản thành công!'
-    showCreateUserModal.value = false
+    usersSuccess.value = isEditingUser.value ? 'Cập nhật tài khoản thành công!' : 'Thêm tài khoản thành công!'
+    showUserModal.value = false
     userForm.value = {
       username: '',
       email: '',
@@ -731,7 +771,7 @@ const getTournamentName = (tournamentId) => {
             <p class="text-xs text-gray-400 mt-1">Danh sách tất cả các tài khoản người dùng đăng ký trên hệ thống</p>
           </div>
           <button 
-            @click="showCreateUserModal = true; usersError = null; usersSuccess = null;"
+            @click="openCreateUserModal"
             class="bg-[#ff4655] hover:bg-[#ff5e6b] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition font-bold cursor-pointer flex items-center gap-2"
           >
             <i class="fas fa-user-plus"></i> Thêm Tài Khoản Mới
@@ -768,14 +808,26 @@ const getTournamentName = (tournamentId) => {
                   class="hover:bg-white/2 transition duration-150"
                 >
                   <td class="py-2 px-6">
-                    <div class="flex items-center justify-center">
+                    <div class="flex items-center justify-center gap-2">
+                      <button 
+                        @click="openEditUserModal(u)"
+                        :disabled="u.username === 'admin'"
+                        class="p-2 rounded-lg bg-white/5 hover:bg-[#ff4655]/10 text-gray-400 hover:text-[#ff4655] transition flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                        title="Chỉnh sửa tài khoản"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" xmlns="http://www.w3.org/2000/svg">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                      </button>
                       <button 
                         @click="handleDeleteUser(u.id, u.username)"
                         :disabled="u.username === 'admin'"
-                        class="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs uppercase tracking-wider transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                        class="p-2 rounded-lg bg-white/5 hover:bg-rose-500/10 text-gray-400 hover:text-rose-500 transition flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                         title="Xóa tài khoản"
                       >
-                        <i class="fas fa-trash-alt"></i> Xóa
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" xmlns="http://www.w3.org/2000/svg">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
                       </button>
                     </div>
                   </td>
@@ -783,16 +835,12 @@ const getTournamentName = (tournamentId) => {
                   <td class="py-4 px-6 text-white font-bold">{{ u.username }}</td>
                   <td class="py-4 px-6 text-gray-300">{{ u.email }}</td>
                   <td class="py-4 px-6">
-                    <select 
-                      v-model="u.role" 
-                      @change="changeUserRole(u.id, u.role, u.username)"
-                      :disabled="u.username === 'admin'"
-                      class="bg-[#0b0e14] border border-white/10 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-[#ff4655] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    <span 
+                      class="px-2.5 py-1 rounded-lg text-xs font-bold border inline-block select-none"
+                      :class="u.role === 'admin' ? 'bg-[#ff4655]/10 text-[#ff4655] border-[#ff4655]/20' : u.role === 'captain' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-white/5 text-gray-400 border-white/10'"
                     >
-                      <option value="guest">Khách</option>
-                      <option value="player">Tuyển thủ</option>
-                      <option value="admin">Admin</option>
-                    </select>
+                      {{ u.role === 'admin' ? 'admin' : u.role === 'captain' ? 'cap' : 'khách' }}
+                    </span>
                   </td>
                   <td class="py-4 px-6 text-xs text-gray-400 font-bold">
                     {{ formatDate(u.created_at) }}
@@ -1065,19 +1113,19 @@ const getTournamentName = (tournamentId) => {
       </div>
     </div>
 
-    <!-- Create User Modal -->
+    <!-- Create / Edit User Modal -->
     <div 
-      v-if="showCreateUserModal" 
+      v-if="showUserModal" 
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn"
     >
       <div class="bg-[#0f131a] border border-white/5 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-scaleIn text-left">
         <!-- Modal Header -->
         <div class="px-6 py-5 border-b border-white/5 flex items-center justify-between bg-white/2">
           <h3 class="text-lg font-bold uppercase tracking-wider font-valorant text-[#ff4655]">
-            Thêm Tài Khoản Mới
+            {{ isEditingUser ? 'Chỉnh sửa Tài Khoản' : 'Thêm Tài Khoản Mới' }}
           </h3>
           <button 
-            @click="showCreateUserModal = false"
+            @click="showUserModal = false"
             class="text-gray-400 hover:text-white transition p-1 hover:bg-white/5 rounded-lg"
           >
             <i class="fas fa-times text-xl"></i>
@@ -1085,7 +1133,7 @@ const getTournamentName = (tournamentId) => {
         </div>
 
         <!-- Modal Form -->
-        <form @submit.prevent="handleCreateUser">
+        <form @submit.prevent="handleSubmitUser">
           <div class="p-6 space-y-4">
             <!-- Error message -->
             <div v-if="usersError" class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold">
@@ -1118,12 +1166,12 @@ const getTournamentName = (tournamentId) => {
 
             <!-- Password -->
             <div>
-              <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Mật Khẩu <span class="text-[#ff4655]">*</span></label>
+              <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Mật Khẩu <span v-if="!isEditingUser" class="text-[#ff4655]">*</span></label>
               <input 
                 v-model="userForm.password" 
                 type="password" 
-                required
-                placeholder="Nhập mật khẩu..." 
+                :required="!isEditingUser"
+                :placeholder="isEditingUser ? 'Bỏ trống nếu không muốn đổi...' : 'Nhập mật khẩu...'" 
                 class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#ff4655] transition font-bold"
               />
             </div>
@@ -1135,9 +1183,9 @@ const getTournamentName = (tournamentId) => {
                 v-model="userForm.role" 
                 class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#ff4655] transition font-bold cursor-pointer"
               >
-                <option value="guest">Khách (Guest)</option>
-                <option value="player">Tuyển thủ (Player)</option>
-                <option value="admin">Quản trị viên (Admin)</option>
+                <option value="guest">Khách (guest)</option>
+                <option value="captain">Đội trưởng (cap)</option>
+                <option value="admin">Quản trị viên (admin)</option>
               </select>
             </div>
           </div>
@@ -1146,7 +1194,7 @@ const getTournamentName = (tournamentId) => {
           <div class="px-6 py-4 border-t border-white/5 bg-white/2 flex items-center justify-end gap-3">
             <button 
               type="button" 
-              @click="showCreateUserModal = false"
+              @click="showUserModal = false"
               class="px-4 py-2.5 rounded-lg border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition font-semibold"
             >
               Hủy
@@ -1155,7 +1203,7 @@ const getTournamentName = (tournamentId) => {
               type="submit" 
               class="px-5 py-2.5 rounded-lg bg-[#ff4655] hover:bg-[#ff5e6b] text-white font-bold transition"
             >
-              Thêm Tài Khoản
+              {{ isEditingUser ? 'Lưu thay đổi' : 'Thêm Tài Khoản' }}
             </button>
           </div>
         </form>

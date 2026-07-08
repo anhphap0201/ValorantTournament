@@ -138,6 +138,17 @@ const User = {
     `;
     const res = await db.query(query, [role, id]);
     return res.rows[0];
+  },
+
+  updateAdmin: async (id, { username, email, password, role }) => {
+    const query = `
+      UPDATE users
+      SET username = $1, email = $2, password_hash = $3, role = $4
+      WHERE id = $5
+      RETURNING id, username, email, role, created_at;
+    `;
+    const res = await db.query(query, [username, email, password, role, id]);
+    return res.rows[0];
   }
 };
 

@@ -95,6 +95,54 @@ const userController = {
       console.error("Lỗi cập nhật vai trò:", error);
       res.status(500).json({ error: "Lỗi hệ thống khi cập nhật vai trò." });
     }
+  },
+
+  update: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { username, email, password, role } = req.body;
+
+      if (!username || !email) {
+        return res.status(400).json({ error: "Tên đăng nhập và email là bắt buộc." });
+      }
+
+      const userToUpdate = await User.findById(id);
+      if (!userToUpdate) {
+        return res.status(404).json({ error: "Không tìm thấy người dùng." });
+      }
+
+      // Safeguard: Prevent changing root admin's details
+      if (userToUpdate.username === 'admin') {
+        return res.status(400).json({ error: "Không thể thay đổi thông tin của tài khoản quản trị gốc." });
+      }
+
+      // Check duplicates
+      const existingUserByUsername = await User.findByUsernameExcludeId(username, id);
+      if (existingUserByUsername) {
+        return res.status(400).json({ error: "Tên đăng nhập đã tồn tại." });
+      }
+
+      const existingUserByEmail = await User.findByEmailExcludeId(email, id);
+      if (existingUserByEmail) {
+        return res.status(400).json({ error: "Email đã tồn tại." });
+      }
+
+      const updatedPassword = password ? password : userToUpdate.password_hash;
+      const updatedUser = await User.updateAdmin(id, {
+        username,
+        email,
+        password: updatedPassword,
+        role: role || 'guest'
+      });
+
+      res.status(200).json({
+        message: "Cập nhật tài khoản thành công!",
+        user: updatedUser
+      });
+    } catch (error) {
+      console.error("Lỗi cập nhật tài khoản:", error);
+      res.status(500).json({ error: "Lỗi hệ thống khi cập nhật tài khoản." });
+    }
   }
 };
 
