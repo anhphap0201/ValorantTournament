@@ -39,6 +39,9 @@ const initializeTable = async () => {
   const alterTeamsTournamentId = `
     ALTER TABLE teams ADD COLUMN IF NOT EXISTS tournament_id INT REFERENCES tournaments(id) ON DELETE SET NULL;
   `;
+  const alterTeamsUserId = `
+    ALTER TABLE teams ADD COLUMN IF NOT EXISTS user_id INT REFERENCES users(id) ON DELETE SET NULL;
+  `;
 
   try {
     await db.query(queryTeams);
@@ -46,6 +49,7 @@ const initializeTable = async () => {
     await db.query(alterTeamId);
     await db.query(alterIsCaptain);
     await db.query(alterTeamsTournamentId);
+    await db.query(alterTeamsUserId);
     console.log("Database tables and columns verified/migrated successfully.");
   } catch (err) {
     console.error("Error creating/migrating tables:", err);
@@ -209,10 +213,10 @@ const Player = {
         );
       }
       
-      // 2. Insert team with tournament_id
+      // 2. Insert team with tournament_id and user_id
       const resTeam = await client.query(
-        "INSERT INTO teams (name, logo, tournament_id) VALUES ($1, $2, $3) RETURNING *",
-        [teamName, teamLogo || null, tournamentId]
+        "INSERT INTO teams (name, logo, tournament_id, user_id) VALUES ($1, $2, $3, $4) RETURNING *",
+        [teamName, teamLogo || null, tournamentId, userId || null]
       );
       const teamId = resTeam.rows[0].id;
       

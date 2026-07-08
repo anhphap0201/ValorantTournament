@@ -19,6 +19,7 @@ const Team = {
   getAll: async (tournamentId = null) => {
     let queryText = `
       SELECT t.*, 
+        c.id as captain_player_id,
         c.nickname as captain_nickname,
         c.avatar as captain_avatar,
         c.rank_name as captain_rank_name,
@@ -39,7 +40,7 @@ const Team = {
     
     const res = await db.query(queryText, params);
     const teamsList = res.rows;
-
+ 
     // For each team, fetch its members
     for (let team of teamsList) {
       // Get members (non-captains)
@@ -52,6 +53,7 @@ const Team = {
       // Construct a clean captain object
       if (team.captain_nickname) {
         team.captain = {
+          id: team.captain_player_id,
           nickname: team.captain_nickname,
           avatar: team.captain_avatar,
           rank_name: team.captain_rank_name,
@@ -59,13 +61,15 @@ const Team = {
           favorite_agent: team.captain_favorite_agent,
           full_name: team.captain_full_name,
           riot_id: team.captain_riot_id,
-          strengths: team.captain_strengths
+          strengths: team.captain_strengths,
+          is_captain: true
         };
       } else {
         team.captain = null;
       }
       
       // Delete temporary join fields from team object to keep response clean
+      delete team.captain_player_id;
       delete team.captain_avatar;
       delete team.captain_rank_name;
       delete team.captain_preferred_role;
@@ -81,6 +85,7 @@ const Team = {
   getById: async (id) => {
     const queryText = `
       SELECT t.*, 
+        c.id as captain_player_id,
         c.nickname as captain_nickname,
         c.avatar as captain_avatar,
         c.rank_name as captain_rank_name,
@@ -107,6 +112,7 @@ const Team = {
     // Construct captain object
     if (team.captain_nickname) {
       team.captain = {
+        id: team.captain_player_id,
         nickname: team.captain_nickname,
         avatar: team.captain_avatar,
         rank_name: team.captain_rank_name,
@@ -114,12 +120,14 @@ const Team = {
         favorite_agent: team.captain_favorite_agent,
         full_name: team.captain_full_name,
         riot_id: team.captain_riot_id,
-        strengths: team.captain_strengths
+        strengths: team.captain_strengths,
+        is_captain: true
       };
     } else {
       team.captain = null;
     }
 
+    delete team.captain_player_id;
     delete team.captain_avatar;
     delete team.captain_rank_name;
     delete team.captain_preferred_role;

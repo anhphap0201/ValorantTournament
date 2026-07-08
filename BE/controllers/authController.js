@@ -120,7 +120,8 @@ const authController = {
         id: user.id,
         username: user.username,
         email: user.email,
-        role: user.role
+        role: user.role,
+        created_at: user.created_at
       });
     } catch (error) {
       console.error("Lỗi lấy thông tin cá nhân:", error);
@@ -158,6 +159,9 @@ const authController = {
 
       let targetPassword = currentUser.password_hash;
       if (password) {
+        if (req.body.oldPassword && req.body.oldPassword !== currentUser.password_hash) {
+          return res.status(400).json({ error: "Mật khẩu hiện tại không chính xác." });
+        }
         if (password === currentUser.password_hash) {
           return res.status(400).json({ error: "Mật khẩu mới phải khác mật khẩu cũ." });
         }
