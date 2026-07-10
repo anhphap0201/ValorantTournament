@@ -167,21 +167,30 @@ const Team = {
   },
 
   update: async (id, data) => {
-    const name = data.name;
-    const logo = data.logo !== undefined ? data.logo : null;
-    const tournament_id = data.tournament_id !== undefined ? (data.tournament_id || data.tournamentId) : null;
-    const tokens_remaining = data.tokens_remaining !== undefined ? data.tokens_remaining : 1000;
+    const current = await Team.getById(id);
+    if (!current) return null;
+
+    const name = data.name !== undefined ? data.name : current.name;
+    const logo = data.logo !== undefined ? data.logo : current.logo;
+    const tournament_id = data.tournament_id !== undefined ? (data.tournament_id || data.tournamentId) : current.tournament_id;
+    const tokens_remaining = data.tokens_remaining !== undefined ? data.tokens_remaining : current.tokens_remaining;
+    const points = data.points !== undefined ? data.points : (current.points || 0);
+    const wins = data.wins !== undefined ? data.wins : (current.wins || 0);
+    const losses = data.losses !== undefined ? data.losses : (current.losses || 0);
 
     const queryText = `
       UPDATE teams SET
         name = $1,
         logo = $2,
         tournament_id = $3,
-        tokens_remaining = $4
-      WHERE id = $5
+        tokens_remaining = $4,
+        points = $5,
+        wins = $6,
+        losses = $7
+      WHERE id = $8
       RETURNING *
     `;
-    const res = await db.query(queryText, [name, logo, tournament_id, tokens_remaining, id]);
+    const res = await db.query(queryText, [name, logo, tournament_id, tokens_remaining, points, wins, losses, id]);
     return res.rows[0];
   },
 
