@@ -495,6 +495,64 @@ const progressPercent = computed(() => {
   return ((currentStep.value - 1) / 4) * 100
 })
 
+const fetchExistingTeam = async () => {
+  const currentUser = Auth.getUser()
+  if (!currentUser) return
+
+  try {
+    const response = await fetch('http://localhost:3000/api/teams')
+    if (!response.ok) throw new Error('Không thể tải danh sách đội')
+    const teams = await response.json()
+
+    const matchingTeam = teams.find(team => {
+      const isUserIdMatch = team.user_id && team.user_id === currentUser.id
+      const isCaptainMatch = team.captain && team.captain.nickname.toLowerCase() === currentUser.username.toLowerCase()
+      const isMemberMatch = team.members && team.members.some(m => m.nickname.toLowerCase() === currentUser.username.toLowerCase())
+      return isUserIdMatch || isCaptainMatch || isMemberMatch
+    })
+
+    if (matchingTeam) {
+      isUpdating.value = true
+      teamName.value = matchingTeam.name || ''
+      teamLogo.value = matchingTeam.logo || ''
+      teamLogoPreview.value = matchingTeam.logo || ''
+
+      const captain = matchingTeam.captain
+      const teamMembersList = captain ? [captain, ...matchingTeam.members] : matchingTeam.members
+
+      for (let i = 0; i < 5; i++) {
+        if (teamMembersList[i]) {
+          const m = teamMembersList[i]
+          let preferredRolesArr = []
+          if (m.preferred_role) {
+            preferredRolesArr = typeof m.preferred_role === 'string'
+              ? m.preferred_role.split(',').map(r => r.trim())
+              : Array.isArray(m.preferred_role)
+                ? m.preferred_role
+                : []
+          }
+          
+          members.value[i] = {
+            fullName: m.full_name || '',
+            gender: m.gender || '',
+            facebookLink: m.facebook_link || '',
+            riotId: m.riot_id || '',
+            nickname: m.nickname || '',
+            rankName: m.rank_name || '',
+            preferredRoles: preferredRolesArr,
+            favoriteAgent: m.favorite_agent || '',
+            strengths: m.strengths || '',
+            avatar: m.avatar || '',
+            avatarPreview: m.avatar || ''
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Lỗi khi tải thông tin đội hiện tại:", err)
+  }
+}
+
 onMounted(async () => {
   await fetchTournaments()
   if (tournaments.value.length > 0) {
@@ -506,6 +564,7 @@ onMounted(async () => {
       playerCount.value = tournament.value.registered_teams_count || 0
     }
   }
+  await fetchExistingTeam()
 })
 
 function normalizeRiotId(member) {
@@ -931,6 +990,28 @@ async function handleSubmit() {
     console.log(`--- Thành viên ${idx + 1} (${idx === 0 ? 'Đội trưởng' : 'Thành viên'}): ---`)
     console.log(JSON.stringify(payload, null, 2))
   })
+
+  // Validate duplicate inputs among members in the form
+  const riotIds = members.value.map(m => m.riotId?.toLowerCase().trim()).filter(Boolean)
+  if (new Set(riotIds).size !== riotIds.length) {
+    statusMessage.value = 'Riot ID của các thành viên không được trùng nhau!'
+    statusType.value = 'error'
+    return
+  }
+
+  const nicknames = members.value.map(m => m.nickname?.toLowerCase().trim()).filter(Boolean)
+  if (new Set(nicknames).size !== nicknames.length) {
+    statusMessage.value = 'Biệt danh Server (Discord Username) của các thành viên không được trùng nhau!'
+    statusType.value = 'error'
+    return
+  }
+
+  const fbLinks = members.value.map(m => m.facebookLink?.toLowerCase().trim()).filter(Boolean)
+  if (new Set(fbLinks).size !== fbLinks.length) {
+    statusMessage.value = 'Liên kết Facebook của các thành viên không được trùng nhau!'
+    statusType.value = 'error'
+    return
+  }
 
   submitting.value = true
 

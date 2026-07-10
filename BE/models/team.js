@@ -19,6 +19,7 @@ const Team = {
   getAll: async (tournamentId = null) => {
     let queryText = `
       SELECT t.*, 
+        c.id as captain_player_id,
         c.nickname as captain_nickname,
         c.avatar as captain_avatar,
         c.rank_name as captain_rank_name,
@@ -26,7 +27,9 @@ const Team = {
         c.favorite_agent as captain_favorite_agent,
         c.full_name as captain_full_name,
         c.riot_id as captain_riot_id,
-        c.strengths as captain_strengths
+        c.strengths as captain_strengths,
+        c.facebook_link as captain_facebook_link,
+        c.gender as captain_gender
       FROM teams t
       LEFT JOIN players c ON t.id = c.team_id AND c.is_captain = true
     `;
@@ -39,7 +42,7 @@ const Team = {
     
     const res = await db.query(queryText, params);
     const teamsList = res.rows;
-
+ 
     // For each team, fetch its members
     for (let team of teamsList) {
       // Get members (non-captains)
@@ -52,6 +55,7 @@ const Team = {
       // Construct a clean captain object
       if (team.captain_nickname) {
         team.captain = {
+          id: team.captain_player_id,
           nickname: team.captain_nickname,
           avatar: team.captain_avatar,
           rank_name: team.captain_rank_name,
@@ -59,13 +63,17 @@ const Team = {
           favorite_agent: team.captain_favorite_agent,
           full_name: team.captain_full_name,
           riot_id: team.captain_riot_id,
-          strengths: team.captain_strengths
+          strengths: team.captain_strengths,
+          facebook_link: team.captain_facebook_link,
+          gender: team.captain_gender,
+          is_captain: true
         };
       } else {
         team.captain = null;
       }
       
       // Delete temporary join fields from team object to keep response clean
+      delete team.captain_player_id;
       delete team.captain_avatar;
       delete team.captain_rank_name;
       delete team.captain_preferred_role;
@@ -73,6 +81,8 @@ const Team = {
       delete team.captain_full_name;
       delete team.captain_riot_id;
       delete team.captain_strengths;
+      delete team.captain_facebook_link;
+      delete team.captain_gender;
     }
     
     return teamsList;
@@ -81,6 +91,7 @@ const Team = {
   getById: async (id) => {
     const queryText = `
       SELECT t.*, 
+        c.id as captain_player_id,
         c.nickname as captain_nickname,
         c.avatar as captain_avatar,
         c.rank_name as captain_rank_name,
@@ -88,7 +99,9 @@ const Team = {
         c.favorite_agent as captain_favorite_agent,
         c.full_name as captain_full_name,
         c.riot_id as captain_riot_id,
-        c.strengths as captain_strengths
+        c.strengths as captain_strengths,
+        c.facebook_link as captain_facebook_link,
+        c.gender as captain_gender
       FROM teams t
       LEFT JOIN players c ON t.id = c.team_id AND c.is_captain = true
       WHERE t.id = $1
@@ -107,6 +120,7 @@ const Team = {
     // Construct captain object
     if (team.captain_nickname) {
       team.captain = {
+        id: team.captain_player_id,
         nickname: team.captain_nickname,
         avatar: team.captain_avatar,
         rank_name: team.captain_rank_name,
@@ -114,12 +128,16 @@ const Team = {
         favorite_agent: team.captain_favorite_agent,
         full_name: team.captain_full_name,
         riot_id: team.captain_riot_id,
-        strengths: team.captain_strengths
+        strengths: team.captain_strengths,
+        facebook_link: team.captain_facebook_link,
+        gender: team.captain_gender,
+        is_captain: true
       };
     } else {
       team.captain = null;
     }
 
+    delete team.captain_player_id;
     delete team.captain_avatar;
     delete team.captain_rank_name;
     delete team.captain_preferred_role;
@@ -127,6 +145,8 @@ const Team = {
     delete team.captain_full_name;
     delete team.captain_riot_id;
     delete team.captain_strengths;
+    delete team.captain_facebook_link;
+    delete team.captain_gender;
 
     return team;
   },
@@ -147,21 +167,30 @@ const Team = {
   },
 
   update: async (id, data) => {
-    const name = data.name;
-    const logo = data.logo !== undefined ? data.logo : null;
-    const tournament_id = data.tournament_id !== undefined ? (data.tournament_id || data.tournamentId) : null;
-    const tokens_remaining = data.tokens_remaining !== undefined ? data.tokens_remaining : 1000;
+    const current = await Team.getById(id);
+    if (!current) return null;
+
+    const name = data.name !== undefined ? data.name : current.name;
+    const logo = data.logo !== undefined ? data.logo : current.logo;
+    const tournament_id = data.tournament_id !== undefined ? (data.tournament_id || data.tournamentId) : current.tournament_id;
+    const tokens_remaining = data.tokens_remaining !== undefined ? data.tokens_remaining : current.tokens_remaining;
+    const points = data.points !== undefined ? data.points : (current.points || 0);
+    const wins = data.wins !== undefined ? data.wins : (current.wins || 0);
+    const losses = data.losses !== undefined ? data.losses : (current.losses || 0);
 
     const queryText = `
       UPDATE teams SET
         name = $1,
         logo = $2,
         tournament_id = $3,
-        tokens_remaining = $4
-      WHERE id = $5
+        tokens_remaining = $4,
+        points = $5,
+        wins = $6,
+        losses = $7
+      WHERE id = $8
       RETURNING *
     `;
-    const res = await db.query(queryText, [name, logo, tournament_id, tokens_remaining, id]);
+    const res = await db.query(queryText, [name, logo, tournament_id, tokens_remaining, points, wins, losses, id]);
     return res.rows[0];
   },
 

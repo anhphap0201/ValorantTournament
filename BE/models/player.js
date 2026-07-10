@@ -39,6 +39,9 @@ const initializeTable = async () => {
   const alterTeamsTournamentId = `
     ALTER TABLE teams ADD COLUMN IF NOT EXISTS tournament_id INT REFERENCES tournaments(id) ON DELETE SET NULL;
   `;
+  const alterTeamsUserId = `
+    ALTER TABLE teams ADD COLUMN IF NOT EXISTS user_id INT REFERENCES users(id) ON DELETE SET NULL;
+  `;
 
   try {
     await db.query(queryTeams);
@@ -46,6 +49,7 @@ const initializeTable = async () => {
     await db.query(alterTeamId);
     await db.query(alterIsCaptain);
     await db.query(alterTeamsTournamentId);
+    await db.query(alterTeamsUserId);
     console.log("Database tables and columns verified/migrated successfully.");
   } catch (err) {
     console.error("Error creating/migrating tables:", err);
@@ -209,12 +213,25 @@ const Player = {
         );
       }
       
-      // 2. Insert team with tournament_id
-      const resTeam = await client.query(
-        "INSERT INTO teams (name, logo, tournament_id) VALUES ($1, $2, $3) RETURNING *",
-        [teamName, teamLogo || null, tournamentId]
-      );
-      const teamId = resTeam.rows[0].id;
+      // 2. Insert or Update team
+      let teamId;
+      let resTeam;
+      const checkTeam = await client.query("SELECT id FROM teams WHERE user_id = $1 LIMIT 1", [userId]);
+      if (checkTeam.rows.length > 0) {
+        teamId = checkTeam.rows[0].id;
+        resTeam = await client.query(
+          "UPDATE teams SET name = $1, logo = $2 WHERE id = $3 RETURNING *",
+          [teamName, teamLogo || null, teamId]
+        );
+        // Delete existing players of this team to prevent duplicates / stale players when updating
+        await client.query("DELETE FROM players WHERE team_id = $1", [teamId]);
+      } else {
+        resTeam = await client.query(
+          "INSERT INTO teams (name, logo, tournament_id, user_id) VALUES ($1, $2, $3, $4) RETURNING *",
+          [teamName, teamLogo || null, tournamentId, userId || null]
+        );
+        teamId = resTeam.rows[0].id;
+      }
       
       const insertedPlayers = [];
       for (let i = 0; i < members.length; i++) {

@@ -42,7 +42,11 @@
         :loading="loadingTeams" 
       />
 
-
+      <!-- Tab 4: Lịch trình -->
+      <TournamentSchedule
+        v-else-if="activeTab === 'schedule'"
+        :tournament="tournament"
+      />
 
     </div>
   </div>
@@ -56,6 +60,7 @@ import { useTournament } from '../composables/useTournament.js'
 import TournamentIntro from '../components/tournament/TournamentIntro.vue'
 import TournamentTeams from '../components/tournament/TournamentTeams.vue'
 import TournamentRules from '../components/tournament/TournamentRules.vue'
+import TournamentSchedule from '../components/tournament/TournamentSchedule.vue'
 
 const { tournaments, loading: loadingTournament, fetchTournaments } = useTournament()
 import { useTeam } from '../composables/useTeam.js'
@@ -68,7 +73,8 @@ const activeTab = ref('intro')
 const tabs = [
   { id: 'intro', name: 'Giới thiệu' },
   { id: 'rules', name: 'Thể lệ' },
-  { id: 'teams', name: 'Đội tuyển' }
+  { id: 'teams', name: 'Đội tuyển' },
+  { id: 'schedule', name: 'Lịch trình' }
 ]
 
 const selectTab = (tabId) => {
