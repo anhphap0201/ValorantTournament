@@ -641,17 +641,25 @@ function nextStep() {
   currentStep.value++
 }
 
+const fakeDataSeed = ref(null);
+
 function fillFakeData() {
   const step = currentStep.value;
   const m = members.value[step - 1];
   
   if (step === 1) {
-    teamName.value = "Draft Kings Esports";
+    fakeDataSeed.value = Math.floor(100 + Math.random() * 900);
+    teamName.value = `Draft Kings Esports #${fakeDataSeed.value}`;
+  }
+
+  const suffix = fakeDataSeed.value || Math.floor(100 + Math.random() * 900);
+  
+  if (step === 1) {
     m.fullName = "Nguyễn Văn Nam";
     m.gender = "Male";
     m.facebookLink = "https://facebook.com/nam.nguyen";
-    m.nickname = "Nam#1234";
-    m.riotId = "Nam#VN1";
+    m.nickname = `Nam#${suffix}`;
+    m.riotId = `Nam#VN${suffix}`;
     m.rankName = "Ascendant 1";
     m.favoriteAgent = "Jett";
     m.preferredRoles = ["Duelist"];
@@ -660,8 +668,8 @@ function fillFakeData() {
     m.fullName = "Trần Huy Khánh";
     m.gender = "Male";
     m.facebookLink = "https://facebook.com/khanh.tran";
-    m.nickname = "Khanh#5678";
-    m.riotId = "Khanh#VN2";
+    m.nickname = `Khanh#${suffix}`;
+    m.riotId = `Khanh#VN${suffix}`;
     m.rankName = "Diamond 3";
     m.favoriteAgent = "Omen";
     m.preferredRoles = ["Controller"];
@@ -670,8 +678,8 @@ function fillFakeData() {
     m.fullName = "Lê Minh Hoàng";
     m.gender = "Male";
     m.facebookLink = "https://facebook.com/hoang.le";
-    m.nickname = "Hoang#9012";
-    m.riotId = "Hoang#VN3";
+    m.nickname = `Hoang#${suffix}`;
+    m.riotId = `Hoang#VN${suffix}`;
     m.rankName = "Platinum 2";
     m.favoriteAgent = "Sova";
     m.preferredRoles = ["Initiator"];
@@ -680,8 +688,8 @@ function fillFakeData() {
     m.fullName = "Phạm Tuấn Anh";
     m.gender = "Male";
     m.facebookLink = "https://facebook.com/anh.tuan";
-    m.nickname = "TuanAnh#3456";
-    m.riotId = "TuanAnh#VN4";
+    m.nickname = `TuanAnh#${suffix}`;
+    m.riotId = `TuanAnh#VN${suffix}`;
     m.rankName = "Gold 3";
     m.favoriteAgent = "Cypher";
     m.preferredRoles = ["Sentinel"];
@@ -690,8 +698,8 @@ function fillFakeData() {
     m.fullName = "Vũ Thùy Linh";
     m.gender = "Female";
     m.facebookLink = "https://facebook.com/linh.vu";
-    m.nickname = "Linh#7890";
-    m.riotId = "Linh#VN5";
+    m.nickname = `Linh#${suffix}`;
+    m.riotId = `Linh#VN${suffix}`;
     m.rankName = "Silver 3";
     m.favoriteAgent = "Sage";
     m.preferredRoles = ["Sentinel"];
