@@ -42,6 +42,9 @@ const initializeTable = async () => {
   const alterTeamsUserId = `
     ALTER TABLE teams ADD COLUMN IF NOT EXISTS user_id INT REFERENCES users(id) ON DELETE SET NULL;
   `;
+  const alterPlayersUserId = `
+    ALTER TABLE players ADD COLUMN IF NOT EXISTS user_id INT REFERENCES users(id) ON DELETE SET NULL;
+  `;
 
   try {
     await db.query(queryTeams);
@@ -50,6 +53,7 @@ const initializeTable = async () => {
     await db.query(alterIsCaptain);
     await db.query(alterTeamsTournamentId);
     await db.query(alterTeamsUserId);
+    await db.query(alterPlayersUserId);
     console.log("Database tables and columns verified/migrated successfully.");
   } catch (err) {
     console.error("Error creating/migrating tables:", err);
@@ -246,8 +250,8 @@ const Player = {
           INSERT INTO players (
             riot_id, nickname, full_name, gender, facebook_link, 
             favorite_agent, strengths, avatar, rank_name, preferred_role,
-            team_id, is_captain
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            team_id, is_captain, user_id
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
           ON CONFLICT (riot_id) DO UPDATE SET
             nickname = EXCLUDED.nickname,
             full_name = EXCLUDED.full_name,
@@ -259,7 +263,8 @@ const Player = {
             rank_name = EXCLUDED.rank_name,
             preferred_role = EXCLUDED.preferred_role,
             team_id = EXCLUDED.team_id,
-            is_captain = EXCLUDED.is_captain
+            is_captain = EXCLUDED.is_captain,
+            user_id = EXCLUDED.user_id
           RETURNING *
         `;
         
@@ -275,7 +280,8 @@ const Player = {
           m.rankName || m.rank_name || '',
           preferredRoleStr,
           teamId,
-          isCaptain
+          isCaptain,
+          isCaptain ? (userId || null) : null
         ];
         
         const resPlayer = await client.query(queryText, values);

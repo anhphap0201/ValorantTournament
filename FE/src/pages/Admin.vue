@@ -40,7 +40,7 @@ const form = ref({
   status: 'upcoming'
 })
 
-const formatList = ['Single Elimination', 'Double Elimination', 'Round Robin', 'Group Stage + Bracket']
+const formatList = ['Round Robin', 'Swiss']
 const statusList = [
   { value: 'upcoming', label: 'Sắp diễn ra', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
   { value: 'register', label: 'Mở đăng ký', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 animate-pulse' },
@@ -278,7 +278,7 @@ const openCreateModal = () => {
     description: '',
     startDate: '',
     endDate: '',
-    format: 'Double Elimination',
+    format: 'Round Robin',
     maxTeams: 8,
     prizePool: '',
     status: 'upcoming'
@@ -303,7 +303,7 @@ const openEditModal = (t) => {
     description: t.description || '',
     startDate: formatDateTime(t.start_date),
     endDate: formatDateTime(t.end_date),
-    format: t.format || 'Double Elimination',
+    format: t.format || 'Round Robin',
     maxTeams: t.max_teams || 8,
     prizePool: t.prize_pool || '',
     status: t.status || 'upcoming'
@@ -384,12 +384,18 @@ const showTeamModal = ref(false)
 const isEditingTeam = ref(false)
 const selectedTeamId = ref(null)
 
+// Captain users list (users with role === 'captain')
+const captainUsers = computed(() => {
+  return users.value.filter(u => u.role === 'captain')
+})
+
 // Form states for team
 const teamForm = ref({
   name: '',
   logo: '',
   tournamentId: '',
-  tokensRemaining: 1000
+  tokensRemaining: 1000,
+  userId: ''
 })
 
 const openCreateTeamModal = () => {
@@ -399,7 +405,8 @@ const openCreateTeamModal = () => {
     name: '',
     logo: '',
     tournamentId: tournaments.value.length > 0 ? tournaments.value[0].id : '',
-    tokensRemaining: 1000
+    tokensRemaining: 1000,
+    userId: ''
   }
   clearTeamMessages()
   showTeamModal.value = true
@@ -412,7 +419,8 @@ const openEditTeamModal = (team) => {
     name: team.name,
     logo: team.logo || '',
     tournamentId: team.tournament_id || '',
-    tokensRemaining: team.tokens_remaining !== undefined ? team.tokens_remaining : 1000
+    tokensRemaining: team.tokens_remaining !== undefined ? team.tokens_remaining : 1000,
+    userId: team.user_id || ''
   }
   clearTeamMessages()
   showTeamModal.value = true
@@ -425,7 +433,8 @@ const handleTeamFormSubmit = async () => {
     name: teamForm.value.name,
     logo: teamForm.value.logo || null,
     tournamentId: teamForm.value.tournamentId || null,
-    tokensRemaining: parseInt(teamForm.value.tokensRemaining) !== undefined ? parseInt(teamForm.value.tokensRemaining) : 1000
+    tokensRemaining: parseInt(teamForm.value.tokensRemaining) !== undefined ? parseInt(teamForm.value.tokensRemaining) : 1000,
+    userId: teamForm.value.userId ? parseInt(teamForm.value.userId) : null
   }
 
   try {
@@ -673,7 +682,7 @@ const resetPlayerFilters = () => {
         <!-- Tournaments Tab -->
         <button 
           @click="currentTab = 'tournaments'"
-          class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition duration-200 font-bold text-sm text-left"
+          class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition duration-200 font-bold text-sm text-left cursor-pointer"
           :class="currentTab === 'tournaments' ? 'bg-[#ff4655] text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'"
         >
           <i class="fas fa-trophy text-lg w-5 text-center"></i>
@@ -683,7 +692,7 @@ const resetPlayerFilters = () => {
         <!-- Players Tab -->
         <button 
           @click="currentTab = 'players'"
-          class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition duration-200 font-bold text-sm text-left"
+          class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition duration-200 font-bold text-sm text-left cursor-pointer"
           :class="currentTab === 'players' ? 'bg-[#ff4655] text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'"
         >
           <i class="fas fa-users text-lg w-5 text-center"></i>
@@ -693,7 +702,7 @@ const resetPlayerFilters = () => {
         <!-- Teams Tab -->
         <button 
           @click="currentTab = 'teams'"
-          class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition duration-200 font-bold text-sm text-left"
+          class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition duration-200 font-bold text-sm text-left cursor-pointer"
           :class="currentTab === 'teams' ? 'bg-[#ff4655] text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'"
         >
           <i class="fas fa-shield-alt text-lg w-5 text-center"></i>
@@ -703,7 +712,7 @@ const resetPlayerFilters = () => {
         <!-- Users Tab -->
         <button 
           @click="currentTab = 'users'"
-          class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition duration-200 font-bold text-sm text-left"
+          class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition duration-200 font-bold text-sm text-left cursor-pointer"
           :class="currentTab === 'users' ? 'bg-[#ff4655] text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'"
         >
           <i class="fas fa-user-cog text-lg w-5 text-center"></i>
@@ -713,7 +722,7 @@ const resetPlayerFilters = () => {
         <!-- Settings Tab -->
         <button 
           @click="currentTab = 'settings'"
-          class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition duration-200 font-bold text-sm text-left"
+          class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition duration-200 font-bold text-sm text-left cursor-pointer"
           :class="currentTab === 'settings' ? 'bg-[#ff4655] text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'"
         >
           <i class="fas fa-sliders-h text-lg w-5 text-center"></i>
@@ -1251,7 +1260,6 @@ const resetPlayerFilters = () => {
                   <th class="py-4.5 px-6">ID</th>
                   <th class="py-4.5 px-6">Đội tuyển</th>
                   <th class="py-4.5 px-6">Giải đấu</th>
-                  <th class="py-4.5 px-6">Koin còn lại</th>
                   <th class="py-4.5 px-6">Đội trưởng (Captain)</th>
                   <th class="py-4.5 px-6">Số thành viên</th>
                 </tr>
@@ -1297,9 +1305,6 @@ const resetPlayerFilters = () => {
                   <td class="py-4 px-6 text-gray-400 font-bold">
                     {{ getTournamentName(team.tournament_id) }}
                   </td>
-                  <td class="py-4 px-6 text-[#fbbf24] font-bold font-valorant">
-                    {{ team.tokens_remaining }} Koin
-                  </td>
                   <td class="py-4 px-6">
                     <span v-if="team.captain" class="text-white font-bold">{{ team.captain.nickname }}</span>
                     <span v-else class="text-gray-500 text-xs italic">Chưa chọn</span>
@@ -1307,7 +1312,7 @@ const resetPlayerFilters = () => {
                   <td class="py-4 px-6 text-white font-bold">
                     {{ team.members ? team.members.length : 0 }}/4
                   </td>
-                </tr>
+                </tr> 
               </tbody>
             </table>
           </div>
@@ -1633,16 +1638,19 @@ const resetPlayerFilters = () => {
               </select>
             </div>
 
-            <!-- Tokens Remaining -->
+
+            <!-- Captain User Selection -->
             <div>
-              <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Số Koin ban đầu</label>
-              <input 
-                v-model="teamForm.tokensRemaining" 
-                type="number" 
-                min="0"
-                max="10000"
-                class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff4655] transition font-bold"
-              />
+              <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Tài khoản Đội trưởng (Liên kết)</label>
+              <select 
+                v-model="teamForm.userId"
+                class="w-full bg-[#0b0e14] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff4655] transition font-bold cursor-pointer"
+              >
+                <option value="">Chưa liên kết tài khoản nào</option>
+                <option v-for="u in captainUsers" :key="u.id" :value="u.id">
+                  {{ u.username }} (ID: {{ u.id }} - {{ u.email || 'Không có email' }})
+                </option>
+              </select>
             </div>
           </div>
 

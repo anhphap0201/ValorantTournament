@@ -156,13 +156,14 @@ const Team = {
     const logo = data.logo || null;
     const tournament_id = data.tournament_id || data.tournamentId || null;
     const tokens_remaining = data.tokens_remaining !== undefined ? data.tokens_remaining : 1000;
+    const user_id = data.user_id || data.userId || null;
 
     const queryText = `
-      INSERT INTO teams (name, logo, tournament_id, tokens_remaining)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO teams (name, logo, tournament_id, tokens_remaining, user_id)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING *
     `;
-    const res = await db.query(queryText, [name, logo, tournament_id, tokens_remaining]);
+    const res = await db.query(queryText, [name, logo, tournament_id, tokens_remaining, user_id]);
     return res.rows[0];
   },
 
@@ -177,6 +178,7 @@ const Team = {
     const points = data.points !== undefined ? data.points : (current.points || 0);
     const wins = data.wins !== undefined ? data.wins : (current.wins || 0);
     const losses = data.losses !== undefined ? data.losses : (current.losses || 0);
+    const user_id = data.user_id !== undefined ? (data.user_id || data.userId) : current.user_id;
 
     const queryText = `
       UPDATE teams SET
@@ -186,11 +188,12 @@ const Team = {
         tokens_remaining = $4,
         points = $5,
         wins = $6,
-        losses = $7
-      WHERE id = $8
+        losses = $7,
+        user_id = $8
+      WHERE id = $9
       RETURNING *
     `;
-    const res = await db.query(queryText, [name, logo, tournament_id, tokens_remaining, points, wins, losses, id]);
+    const res = await db.query(queryText, [name, logo, tournament_id, tokens_remaining, points, wins, losses, user_id, id]);
     return res.rows[0];
   },
 

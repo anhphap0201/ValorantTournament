@@ -68,7 +68,12 @@
         <router-link 
           v-else
           :to="buttonLink" 
-          class="group relative flex justify-center items-center gap-2.5 w-full md:w-auto md:min-w-[200px] px-8 py-5 bg-[#ff4655] hover:bg-[#ff5e6b] text-white text-center font-bold text-lg tracking-wider rounded-lg shadow-lg shadow-[#ff4655]/30 transition-all duration-300 overflow-hidden transform hover:-translate-y-1"
+          class="group relative flex justify-center items-center gap-2.5 w-full md:w-auto md:min-w-[200px] px-8 py-5 text-center font-bold text-lg tracking-wider rounded-lg transition-all duration-300 overflow-hidden transform hover:-translate-y-1"
+          :class="[
+            isUserRegistered 
+              ? 'bg-[#00f599] hover:bg-[#1efaa6] text-[#0f1923] shadow-lg shadow-[#00f599]/20' 
+              : 'bg-[#ff4655] hover:bg-[#ff5e6b] text-white shadow-lg shadow-[#ff4655]/30'
+          ]"
         >
           <!-- Slanted effect layer -->
           <div class="absolute inset-0 w-0 bg-white/20 transition-all duration-300 ease-out group-hover:w-full"></div>
@@ -87,6 +92,7 @@ import { ref, computed, onMounted } from 'vue'
 const playerCount = ref(0)
 const maxPlayers = ref(0)
 const tournament = ref(null)
+const isUserRegistered = ref(false)
 
 const isLimitReached = computed(() => {
   if (!tournament.value) return true
@@ -106,12 +112,30 @@ const tournamentDescription = computed(() => {
 })
 
 const buttonLink = computed(() => {
-  return "/register-player"
+  return isUserRegistered.value ? "/profile" : "/register-player"
 })
 
 const buttonText = computed(() => {
-  return "Đăng ký ngay"
+  return isUserRegistered.value ? "Bạn đã đăng ký" : "Đăng ký ngay"
 })
+
+const checkUserRegistration = async (userId, username) => {
+  try {
+    const response = await fetch('http://localhost:3000/api/teams')
+    if (response.ok) {
+      const teams = await response.json()
+      const matched = teams.some(team => {
+        const isUserIdMatch = team.user_id && team.user_id === userId
+        const isCaptainMatch = team.captain && team.captain.nickname.toLowerCase() === username.toLowerCase()
+        const isMemberMatch = team.members && team.members.some(m => m.nickname.toLowerCase() === username.toLowerCase())
+        return isUserIdMatch || isCaptainMatch || isMemberMatch
+      })
+      isUserRegistered.value = matched
+    }
+  } catch (err) {
+    console.error('Lỗi khi kiểm tra đăng ký của user:', err)
+  }
+}
 
 function formatDateTime(val) {
   if (!val) return 'Chưa có lịch';
@@ -129,6 +153,13 @@ function formatDateTime(val) {
 }
 
 onMounted(async () => {
+  // Check user registration first
+  const storedUser = localStorage.getItem('user')
+  if (storedUser) {
+    const user = JSON.parse(storedUser)
+    await checkUserRegistration(user.id, user.username)
+  }
+
   try {
     const response = await fetch('http://localhost:3000/api/tournaments')
     if (response.ok) {

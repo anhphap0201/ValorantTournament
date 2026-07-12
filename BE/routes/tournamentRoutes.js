@@ -12,6 +12,7 @@ router.delete("/:id", tournamentController.delete);
 // Matches & Standings Routes
 router.get("/:id/matches", matchController.getMatchesByTournament);
 router.post("/:id/schedule", matchController.generateSchedule);
+router.post("/:id/next-round", matchController.generateNextRound);
 router.post("/:id/finalize", matchController.finalizeStandings);
 router.put("/matches/:matchId", matchController.updateMatchScore);
 router.post("/matches/:matchId/winner", matchController.selectPlayoffWinner);

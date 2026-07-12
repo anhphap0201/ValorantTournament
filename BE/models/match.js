@@ -19,15 +19,20 @@ const initializeTable = async () => {
       team_b_score INT DEFAULT 0,
       status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'completed')),
       winner_id INT REFERENCES teams(id) ON DELETE SET NULL,
-      stage VARCHAR(50) DEFAULT 'round_robin' CHECK (stage IN ('round_robin', 'semi_final', 'third_place', 'final')),
+      stage VARCHAR(50) DEFAULT 'round_robin' CHECK (stage IN ('round_robin', 'swiss', 'semi_final', 'third_place', 'final')),
       match_order INT DEFAULT 1,
+      match_time TIMESTAMP,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `;
 
   const alterMatchesStageCheck = `
     ALTER TABLE matches DROP CONSTRAINT IF EXISTS matches_stage_check;
-    ALTER TABLE matches ADD CONSTRAINT matches_stage_check CHECK (stage IN ('round_robin', 'semi_final', 'third_place', 'final'));
+    ALTER TABLE matches ADD CONSTRAINT matches_stage_check CHECK (stage IN ('round_robin', 'swiss', 'semi_final', 'third_place', 'final'));
+  `;
+
+  const alterMatchesTimeQuery = `
+    ALTER TABLE matches ADD COLUMN IF NOT EXISTS match_time TIMESTAMP;
   `;
 
   try {
@@ -36,6 +41,7 @@ const initializeTable = async () => {
     
     await db.query(createMatchesQuery);
     await db.query(alterMatchesStageCheck);
+    await db.query(alterMatchesTimeQuery);
     console.log("Database table 'matches' is verified/created/migrated successfully.");
   } catch (err) {
     console.error("Error creating/migrating 'matches' table or altering 'teams' table:", err);
@@ -127,17 +133,25 @@ const Match = {
   },
 
   update: async (id, data) => {
-    const { team_a_score, team_b_score, status, winner_id } = data;
+    const fields = [];
+    const values = [];
+    let idx = 1;
+
+    for (const [key, val] of Object.entries(data)) {
+      fields.push(`${key} = $${idx}`);
+      values.push(val);
+      idx++;
+    }
+
+    if (fields.length === 0) return null;
+
+    values.push(id);
     const queryText = `
       UPDATE matches SET
-        team_a_score = $1,
-        team_b_score = $2,
-        status = $3,
-        winner_id = $4
-      WHERE id = $5
+        ${fields.join(", ")}
+      WHERE id = $${idx}
       RETURNING *
     `;
-    const values = [team_a_score, team_b_score, status, winner_id, id];
     const res = await db.query(queryText, values);
     return res.rows[0];
   }

@@ -16,8 +16,13 @@ const initializeTable = async () => {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `;
+  const alterQuery = `
+    ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS swiss_wins_required INT DEFAULT 3;
+    ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS swiss_losses_required INT DEFAULT 3;
+  `;
   try {
     await db.query(queryText);
+    await db.query(alterQuery);
     console.log("Database table 'tournaments' is verified/created successfully.");
   } catch (err) {
     console.error("Error creating 'tournaments' table:", err);
@@ -60,15 +65,17 @@ const Tournament = {
     const max_teams = data.max_teams || data.maxTeams || null;
     const prize_pool = data.prize_pool || data.prizePool || '';
     const status = data.status || 'upcoming';
+    const swiss_wins_required = data.swiss_wins_required !== undefined ? data.swiss_wins_required : (data.swissWinsRequired !== undefined ? data.swissWinsRequired : 3);
+    const swiss_losses_required = data.swiss_losses_required !== undefined ? data.swiss_losses_required : (data.swissLossesRequired !== undefined ? data.swissLossesRequired : 3);
 
     const queryText = `
       INSERT INTO tournaments (
-        name, description, start_date, end_date, format, max_teams, prize_pool, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        name, description, start_date, end_date, format, max_teams, prize_pool, status, swiss_wins_required, swiss_losses_required
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
     `;
 
-    const values = [name, description, start_date, end_date, format, max_teams, prize_pool, status];
+    const values = [name, description, start_date, end_date, format, max_teams, prize_pool, status, swiss_wins_required, swiss_losses_required];
     const res = await db.query(queryText, values);
     return res.rows[0];
   },
@@ -82,6 +89,8 @@ const Tournament = {
     const max_teams = data.max_teams || data.maxTeams || null;
     const prize_pool = data.prize_pool || data.prizePool || '';
     const status = data.status || 'upcoming';
+    const swiss_wins_required = data.swiss_wins_required !== undefined ? data.swiss_wins_required : (data.swissWinsRequired !== undefined ? data.swissWinsRequired : 3);
+    const swiss_losses_required = data.swiss_losses_required !== undefined ? data.swiss_losses_required : (data.swissLossesRequired !== undefined ? data.swissLossesRequired : 3);
 
     const queryText = `
       UPDATE tournaments SET
@@ -92,12 +101,14 @@ const Tournament = {
         format = $5,
         max_teams = $6,
         prize_pool = $7,
-        status = $8
-      WHERE id = $9
+        status = $8,
+        swiss_wins_required = $9,
+        swiss_losses_required = $10
+      WHERE id = $11
       RETURNING *
     `;
 
-    const values = [name, description, start_date, end_date, format, max_teams, prize_pool, status, id];
+    const values = [name, description, start_date, end_date, format, max_teams, prize_pool, status, swiss_wins_required, swiss_losses_required, id];
     const res = await db.query(queryText, values);
     return res.rows[0];
   },

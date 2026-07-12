@@ -21,7 +21,10 @@
           <i class="fas fa-ban text-lg animate-pulse"></i>
           <span>Đăng ký giải đấu đã đóng</span>
         </div>
-        <p class="text-xs text-gray-300 leading-relaxed">
+        <p class="text-xs text-gray-300 leading-relaxed" v-if="tournament && tournament.status !== 'register'">
+          Hiện tại giải đấu này không ở trạng thái mở đăng ký (Trạng thái hiện tại: <strong class="text-white uppercase tracking-wider">{{ tournament.status === 'upcoming' ? 'Sắp diễn ra' : tournament.status === 'running' ? 'Đang đấu' : 'Kết thúc' }}</strong>). Ban Tổ Chức đã đóng cổng tiếp nhận đơn đăng ký mới.
+        </p>
+        <p class="text-xs text-gray-300 leading-relaxed" v-else>
           Hiện tại số lượng đăng ký tham gia giải đấu đã đạt giới hạn tối đa (<strong class="text-white">{{ playerCount }}/{{ maxPlayers }}</strong> đội). Ban Tổ Chức đã ngừng tiếp nhận đơn đăng ký mới.
         </p>
         <div class="pt-2">
@@ -253,9 +256,13 @@
                         v-model="members[currentStep - 1].nickname" 
                         type="text" 
                         required
+                        :disabled="currentStep === 1"
                         placeholder="Nhập username Discord" 
-                        class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff4655] transition duration-200"
+                        class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff4655] transition duration-200 disabled:opacity-70 disabled:cursor-not-allowed disabled:border-[#ff4655]/40"
                       />
+                      <p v-if="currentStep === 1" class="text-[10px] text-[#ff4655] font-semibold mt-2 flex items-center gap-1.5 animate-pulse">
+                        <i class="fas fa-info-circle"></i> Tự động lấy tên tài khoản của bạn làm Đội trưởng để liên kết chính xác.
+                      </p>
                     </div>
                   </div>
 
@@ -444,8 +451,10 @@ const playerCount = ref(12) // e.g. 12 teams registered
 
 const isLimitReached = computed(() => {
   if (isUpdating.value) return false
-  if (maxPlayers.value === null || maxPlayers.value === undefined) return false
-  return playerCount.value >= maxPlayers.value
+  if (!tournament.value) return false
+  const isClosedStatus = tournament.value.status !== 'register'
+  const isFull = maxPlayers.value !== null && maxPlayers.value !== undefined && playerCount.value >= maxPlayers.value
+  return isClosedStatus || isFull
 })
 
 const stepLabels = ['Đội trưởng', 'Thành viên 2', 'Thành viên 3', 'Thành viên 4', 'Thành viên 5']
@@ -565,6 +574,14 @@ onMounted(async () => {
     }
   }
   await fetchExistingTeam()
+
+  // Pre-fill Captain (Member 1) nickname from logged in user if not updating
+  if (!isUpdating.value) {
+    const currentUser = Auth.getUser()
+    if (currentUser) {
+      members.value[0].nickname = currentUser.username
+    }
+  }
 })
 
 function normalizeRiotId(member) {

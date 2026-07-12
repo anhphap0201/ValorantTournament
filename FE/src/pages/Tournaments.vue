@@ -9,7 +9,7 @@
           :key="tab.id"
           @click="selectTab(tab.id)"
           :class="[
-            'pb-3.5 text-xs sm:text-sm font-bold uppercase tracking-wider transition-all duration-300 relative font-valorant outline-none whitespace-nowrap',
+            'pb-3.5 text-xs sm:text-sm font-bold uppercase tracking-wider transition-all duration-300 relative font-valorant outline-none whitespace-nowrap cursor-pointer',
             activeTab === tab.id ? 'text-[#ff4655]' : 'text-gray-400 hover:text-white'
           ]"
         >

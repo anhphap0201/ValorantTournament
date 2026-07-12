@@ -60,12 +60,38 @@
               </div>
               
               <div class="mt-6 pt-6 border-t border-white/10 flex flex-col gap-3">
+                <!-- If already registered: Allow updating details anytime -->
                 <router-link 
+                  v-if="isRegistered"
                   to="/register-player"
                   class="w-full block text-center bg-[#ff4655] hover:bg-[#ff5e6b] text-white px-4 py-2.5 rounded text-sm font-bold uppercase tracking-wider transition duration-200 shadow-md shadow-[#ff4655]/20 font-valorant"
                 >
-                  {{ isRegistered ? 'Cập nhật thông tin đăng ký' : 'Đăng ký giải đấu' }}
+                  Cập nhật thông tin đăng ký
                 </router-link>
+
+                <!-- If not registered yet: Check active tournament status and capacity -->
+                <template v-else>
+                  <router-link 
+                    v-slot="{ navigate }"
+                    v-if="activeTournament && activeTournament.status === 'register' && activeTournament.registered_teams_count < activeTournament.max_teams"
+                    to="/register-player"
+                    custom
+                  >
+                    <button
+                      @click="navigate"
+                      class="w-full text-center bg-[#ff4655] hover:bg-[#ff5e6b] text-white px-4 py-2.5 rounded text-sm font-bold uppercase tracking-wider transition duration-200 shadow-md shadow-[#ff4655]/20 font-valorant cursor-pointer animate-pulse"
+                    >
+                      Đăng ký giải đấu
+                    </button>
+                  </router-link>
+                  
+                  <div 
+                    v-else 
+                    class="w-full text-center bg-white/5 border border-white/5 text-gray-500 px-4 py-2.5 rounded text-xs font-bold uppercase tracking-wider cursor-not-allowed font-valorant"
+                  >
+                    {{ activeTournament && activeTournament.status !== 'register' ? 'Đăng ký giải đấu (Đã đóng)' : 'Đăng ký giải đấu (Giải đấu đã đầy)' }}
+                  </div>
+                </template>
 
                 <button 
                   v-if="!showPasswordForm"
@@ -257,8 +283,30 @@
                 to="/register-player"
                 class="bg-[#ff4655] hover:bg-[#ff5e6b] text-white px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition duration-200 mt-2 cursor-pointer shadow-lg shadow-[#ff4655]/20"
               >
-                Đăng ký ngay bây giờ
+                Đăng ký đội tuyển mới
               </router-link>
+
+              <!-- Link existing team section for Captains -->
+              <div v-if="currentUser && currentUser.role === 'captain' && unlinkedTeams.length > 0" class="w-full max-w-md border-t border-white/10 pt-8 mt-6">
+                <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-2 font-valorant">Hoặc liên kết với Đội tuyển sẵn có</h4>
+                <p class="text-[10px] text-gray-500 mb-4">Nếu đội tuyển của bạn đã được tạo trước đó bởi Admin hoặc đăng ký lúc chưa đăng nhập, chọn để liên kết tài khoản.</p>
+                <div class="flex gap-2 w-full">
+                  <select 
+                    v-model="selectedTeamToLink"
+                    class="flex-grow bg-[#0b0e14] border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-[#ff4655] font-bold cursor-pointer min-w-0"
+                  >
+                    <option value="">-- Chọn đội tuyển --</option>
+                    <option v-for="t in unlinkedTeams" :key="t.id" :value="t.id">{{ t.name }}</option>
+                  </select>
+                  <button 
+                    @click="handleLinkTeam"
+                    :disabled="linkingTeam || !selectedTeamToLink"
+                    class="bg-amber-500 hover:bg-amber-600 disabled:bg-amber-500/20 disabled:text-gray-600 text-black px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition cursor-pointer shrink-0"
+                  >
+                    {{ linkingTeam ? 'Đang lưu...' : 'Liên kết' }}
+                  </button>
+                </div>
+              </div>
             </div>
 
           </div>
@@ -343,6 +391,9 @@ const userTeam = ref(null)
 const teamMembers = ref([])
 const activeMemberIndex = ref(0)
 const isRegistered = ref(false)
+const unlinkedTeams = ref([])
+const selectedTeamToLink = ref('')
+const linkingTeam = ref(false)
 
 const playerProfile = computed(() => {
   return teamMembers.value[activeMemberIndex.value] || null
@@ -353,6 +404,35 @@ const captainAvatar = computed(() => {
   return captain?.avatar || null
 })
 
+const handleLinkTeam = async () => {
+  if (!selectedTeamToLink.value) return
+  linkingTeam.value = true
+  errorMessage.value = ''
+  successMessage.value = ''
+  
+  try {
+    const response = await fetch(`http://localhost:3000/api/teams/${selectedTeamToLink.value}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ userId: currentUser.value.id })
+    })
+    
+    const data = await response.json()
+    if (!response.ok) {
+      throw new Error(data.error || 'Liên kết đội tuyển thất bại.')
+    }
+    
+    successMessage.value = 'Liên kết tài khoản với đội tuyển thành công!'
+    await fetchPlayerTeam()
+  } catch (err) {
+    errorMessage.value = err.message
+  } finally {
+    linkingTeam.value = false
+  }
+}
+
 const fetchPlayerTeam = async () => {
   if (!currentUser.value) return
   
@@ -360,6 +440,9 @@ const fetchPlayerTeam = async () => {
     const response = await fetch('http://localhost:3000/api/teams')
     if (!response.ok) throw new Error('Không thể tải danh sách đội')
     const teams = await response.json()
+    
+    // Find unlinked teams for captain users
+    unlinkedTeams.value = teams.filter(t => !t.user_id)
     
     // Find the team where user is either the captain or a member
     const matchingTeam = teams.find(team => {
@@ -484,8 +567,24 @@ const handleChangePassword = async () => {
   }
 }
 
+const activeTournament = ref(null)
+
+const fetchActiveTournament = async () => {
+  try {
+    const response = await fetch('http://localhost:3000/api/tournaments')
+    if (!response.ok) throw new Error('Không thể tải danh sách giải đấu')
+    const tournamentsList = await response.json()
+    if (tournamentsList.length > 0) {
+      activeTournament.value = tournamentsList[0]
+    }
+  } catch (err) {
+    console.error("Lỗi khi tải thông tin giải đấu:", err)
+  }
+}
+
 onMounted(() => {
   fetchUserProfile()
+  fetchActiveTournament()
 })
 </script>
 
